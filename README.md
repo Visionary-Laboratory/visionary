@@ -4,7 +4,6 @@
 
 <img width="140" height="96" alt="Logo_深色竖版英文" src="https://github.com/user-attachments/assets/2d2f2c37-9fd5-438a-bb42-8163b5f8aa7a" />
 
-[![arXiv](https://img.shields.io/badge/arXiv-Pending-b31b1b.svg)](https://arxiv.org/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![WebGPU](https://img.shields.io/badge/WebGPU-Ready-green?style=flat-square)](https://www.w3.org/TR/webgpu/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square)](https://www.typescriptlang.org/)
@@ -13,7 +12,7 @@
 
 **Visionary: The World Model Carrier Built on WebGPU-Powered Gaussian Splatting Platform**
 
-[Project Page](https://ai4sports.opengvlab.com/) | [Document](https://your-docs-url.com) | [Quick Start](#quick-start) | [Issues](https://github.com/Visionary-Laboratory/visionary/issues)
+[Project Page](https://ai4sports.opengvlab.com/) | [Paper](https://arxiv.org/) | [Document](https://your-docs-url.com)
 
 </div>
 
@@ -26,7 +25,7 @@
 Neural rendering, particularly 3D Gaussian Splatting (3DGS), has evolved rapidly and become a key component for building world models. In this work, we present Visionary, an open, web-native platform for real-time various Gaussian Splatting and meshes rendering. Built on an efficient WebGPU renderer with per-frame ONNX inference, Visionary enables dynamic neural processing while maintaining a lightweight, "click-to-run" browser experience. It introduces a standardized Gaussian Generator contract, which not only supports standard 3DGS rendering but also allows plug-and-play algorithms to generate or update Gaussians each frame. Such inference also enables us to apply feedforward generative post-processing. The platform further offers a plug in three.js library with a concise TypeScript API for seamless integration into existing web applications. Experiments show that, under identical 3DGS assets, Visionary achieves superior rendering efficiency compared to current Web viewers due to GPU-based primitive sorting. It already supports multiple variants, including MLP-based 3DGS, 4DGS, neural avatars, and style transformation or enhancement networks. By unifying inference and rendering directly in the browser, Visionary significantly lowers the barrier to reproduction, comparison, and deployment of 3DGS-family methods, serving as a unified World Model Carrier for both reconstructive and generative paradigms.
 </details>
 
-Additionally, we provide a powerful [Online Editor](https://ai4sports.opengvlab.com/index_visionary.html) to help users easily manage and edit 3D scenes.
+We have developed a powerful [Online Editor](https://ai4sports.opengvlab.com/index_visionary.html) based on Visionary to help users easily manage and edit 3D scenes in one click. If you want to develop your own web project using this project, please refer to [Quick Start](#quick-start).
 
 ![Teaser](teaser.png)
 
