@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "meta": {
+    "app": "WebGaussianJS",
+    "createdAt": "2025-09-11T13:21:18.549Z",
+    "unit": "meter"
+  },
+  "env": {
+    "bgColor": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "gaussianScale": 1
+  },
+  "assets": [
+    {
+      "name": "onnx model",
+      "type": "onnx",
+      "path": "gaussians3d_car.onnx",
+      "dynamic": true
+    },
+    {
+      "name": "test.ply",
+      "type": "ply",
+      "path": "test.ply",
+      "transform": {
+        "position": [
+          -5,
+          -1,
+          0.4
+        ],
+        "rotationEulerRad": [
+          0.19198621771937624,
+          -0.017453292519943295,
+          0.05235987755982988
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "name": "onnx model (1)",
+      "type": "onnx",
+      "path": "gaussians3d_gauhuman.onnx",
+      "dynamic": true,
+      "transform": {
+        "position": [
+          -0.6,
+          -0.2,
+          0.1
+        ],
+        "rotationEulerRad": [
+          0.19198621771937624,
+          -0.017453292519943295,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "name": "onnx model (2)",
+      "type": "onnx",
+      "path": "gaussians4d.onnx",
+      "dynamic": true,
+      "transform": {
+        "position": [
+          0.3,
+          0.5,
+          -1.4
+        ],
+        "rotationEulerRad": [
+          1.7627825445142729,
+          -0.017453292519943295,
+          -2.129301687433082
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  ]
+}
