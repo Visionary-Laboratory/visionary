@@ -89,7 +89,12 @@ This project is deeply inspired and supported by the following open source proje
 If you use Visionary in your research or projects, please consider citing:
 
 ```bibtex
-
+@article{gong2025visionary,
+      title={Visionary: The World Model Carrier Built on WebGPU-Powered Gaussian Splatting Platform}, 
+      author={Gong, Yuning and Liu, Yifei and Zhan, Yifan and Niu, Muyao and Li, Xueying and Liao, Yuanjun and Chen, Jiaming and Gao, Yuanyuan and Chen, Jiaqi and Chen, Minming and Zhou, Li and Zhang, Yuning and Wang, Wei and Hou, Xiaoqing and Huang, Huaxi and Tang, Shixiang and Ma, Le and Zhang, Dingwen and Yang, Xue and Yan, Junchi and Zhang, Yanchi and Zheng, Yinqiang and Sun, Xiao and Zhong, Zhihang},
+      journal={arXiv preprint arXiv:xxxx.xxxxx},
+      year={2025}
+}
 ```
 
 ## 📝 License
