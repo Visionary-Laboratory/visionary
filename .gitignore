@@ -40,3 +40,4 @@ models_download/
 src/VisionaryCore/
 datasets/
 *.tgz
+package-lock.json
