@@ -1,8 +1,8 @@
-# VisionaryCore
-
 <div align="center">
+<img width="140" height="96" alt="Logo_深色竖版英文" src="https://github.com/user-attachments/assets/2d2f2c37-9fd5-438a-bb42-8163b5f8aa7a" />
 
-![VisionaryCore Logo](public/vite.svg)
+
+
 
 [![NPM Version](https://img.shields.io/npm/v/visionary-core?style=flat-square)](https://www.npmjs.com/package/visionary-core)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
@@ -11,7 +11,7 @@
 
 [English](README-en.md) | [中文](README.md)
 
-**Next-Generation WebGPU-Powered 3D Gaussian Splatting Rendering Engine**
+**Visionary: The World Model Carrier Built on WebGPU-Powered Gaussian Splatting Platform**
 
 [VisionaryEditor](https://editor-url-placeholder) | [Online Docs](https://your-docs-url.com) | [Quick Start](#quick-start) | [FAQ](#faq)
 
@@ -19,7 +19,7 @@
 
 ---
 
-**VisionaryCore** is a high-performance immersive Web 3D rendering engine built on **WebGPU** and **onnx-runtime** technologies.
+**Visionary** is a high-performance immersive Web 3D rendering engine built on **WebGPU** and **onnx-runtime** technologies.
 
 It aims to break the boundaries between traditional 3D meshes and emerging point cloud rendering technologies. Through an original **Hybrid Rendering Pipeline**, it seamlessly blends standard 3D models (GLB/GLTF) with high-fidelity Gaussian Splatting (3DGS/4DGS) content within the same WebGPU context, providing unified depth occlusion and lighting processing.
 
@@ -80,20 +80,13 @@ This project is deeply inspired and supported by the following open source proje
 
 ## 📄 Citation
 
-If you use VisionaryCore in your research or projects, please consider citing:
+If you use Visionary in your research or projects, please consider citing:
 
 ```bibtex
-@misc{visionarycore2025,
-  author = {Your Name and Contributors},
-  title = {VisionaryCore: High-Performance WebGPU 3D Gaussian Splatting Renderer},
-  year = {2025},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/your-username/Visionary-PrePublic}}
-}
+
 ```
 
 ## 📝 License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [Apache-2.0 license](LICENSE).
 
