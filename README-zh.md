@@ -19,7 +19,7 @@
 
 ---
 
-> **TL;DR:** Visionary 是一个基于 WebGPU 和 ONNX Runtime 构建的开放、原生 Web 平台。它支持直接在浏览器中实时渲染多种 Gaussian Splatting 变体（3DGS、4DGS、Avatars）。
+> **TL;DR:** Visionary 是一个基于 WebGPU 和 ONNX Runtime 构建的开放、原生 Web 平台。它支持直接在浏览器中实时渲染多种 Gaussian Splatting 变体（3DGS、4DGS、Avatars 以及 <span style="font-family: 'Brush Script MT', cursive; font-size: 1.2em; color: #FFD700; text-shadow: 1px 1px 2px black;">✨任何未来的算法✨</span>）。
 
 <details>
 <summary><b>Abstract</b></summary>
@@ -38,7 +38,7 @@
   - **静态高斯**: PLY, SPLAT, KSplat, SPZ, SOG
   - **标准模型**: GLB, GLTF, FBX, OBJs
   - **4DGS/Avatar/scaffold-GS**: ONNX
-  - **自定义算法**: 详见 [导出算法至 ONNX](#导出算法至-onnx)。
+  - **<span style="font-family: 'Brush Script MT', cursive; font-size: 1.1em; color: #FF4500;">🔥自定义算法</span>**: 详见 [导出算法至 ONNX](#导出算法至-onnx)。
 
 <a id="快速开始"></a>
 ## 🚀 快速开始

@@ -19,7 +19,7 @@
 
 ---
 
-> **TL;DR:** Visionary is an open, web-native platform built on WebGPU and ONNX Runtime. Enabling real-time rendering of diverse Gaussian Splatting variants (3DGS, 4DGS, Avatars) directly in the browser.
+> **TL;DR:** Visionary is an open, web-native platform built on WebGPU and ONNX Runtime. Enabling real-time rendering of diverse Gaussian Splatting variants (3DGS, MLP-based 3DGS, 4DGS, Neural Avatars and <span style="font-family: 'Brush Script MT', cursive; font-size: 1.2em; color: #FFD700; text-shadow: 1px 1px 2px black;">✨any future algorithms✨</span>), and traditional 3d Mesh, directly in the browser. We also support post-processing using feed-forward networks.
 
 <details>
 <summary><b>Abstract</b></summary>
@@ -38,7 +38,7 @@ Additionally, we provide a powerful [Online Editor](https://ai4sports.opengvlab.
   - **Static Gaussians**: PLY, SPLAT, KSplat, SPZ, SOG
   - **Standard Mesh Models**: GLB, GLTF, FBX, OBJ
   - **4DGS/Avatar/scaffold-GS**: ONNX
-  - **Your own algorithom**: See [Export your algorithm to ONNX](#export-your-algorithm-to-onnx) in detail.
+  - **<span style="font-family: 'Brush Script MT', cursive; font-size: 1.1em; color: #FF4500;">🔥Your own algorithom</span>**: See [Export your algorithm to ONNX](#export-your-algorithm-to-onnx) in detail.
 
 <a id="quick-start"></a>
 ## 🚀 Quick Start
