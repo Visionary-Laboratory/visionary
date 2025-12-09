@@ -1,3 +1,0 @@
-[submodule "onnx-examples"]
-	path = examples/onnx-examples
-	url = https://github.com/Visionary-Laboratory/ONNX-Examples.git
