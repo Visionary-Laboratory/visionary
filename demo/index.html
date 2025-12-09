@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visionary Simple Viewer</title>
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Canvas -->
+        <canvas id="canvas"></canvas>
+        
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay hidden">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading...</div>
+            <div class="loading-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 0%"></div>
+                </div>
+                <span class="progress-text">0%</span>
+            </div>
+        </div>
+        
+        <!-- UI Panels -->
+        <div class="ui-container">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <h1 class="title">Visionary Simple Viewer</h1>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">FPS:</span>
+                        <span id="fps" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Points:</span>
+                        <span id="pointCount" class="stat-value">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Side Panel -->
+            <div class="side-panel">
+                <!-- File Loading Section -->
+                <div class="panel-section">
+                    <h3>加载文件（ONNX / 3DGS PLY）</h3>
+                    
+                    <!-- Drag and Drop Area -->
+                    <div id="dropZone" class="drop-zone">
+                        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <p class="drop-text">拖拽 ONNX 或 3DGS 的 PLY 文件到此</p>
+                        <p class="drop-subtext">或</p>
+                        <button id="browseButton" class="button button-primary">选择文件</button>
+                        <input type="file" id="fileInput" accept=".ply,.onnx" style="display: none;">
+                    </div>
+                    
+                    <!-- Recent Files (optional, kept for convenience) -->
+                    <div id="recentFiles" class="recent-files hidden">
+                        <h4>最近文件</h4>
+                        <ul id="recentFilesList"></ul>
+                    </div>
+                </div>
+                
+                <!-- Controls Help -->
+                <div class="panel-section">
+                    <h3>操作说明</h3>
+                    <div class="help-text">
+                        <p><strong>轨道视角：</strong> 默认围绕模型中心</p>
+                        <p><strong>旋转：</strong> 左键拖拽</p>
+                        <p><strong>平移：</strong> 右键拖拽</p>
+                        <p><strong>缩放：</strong> 滚轮</p>
+                        <p><strong>提示：</strong> 支持 ONNX 和 3DGS PLY 文件</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Toggle Button -->
+            <button id="togglePanel" class="toggle-panel-btn" aria-label="Toggle panel">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18l6-6-6-6" />
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Error Modal -->
+        <div id="errorModal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Error</h3>
+                <p id="errorMessage"></p>
+                <button id="closeError" class="button button-primary">Close</button>
+            </div>
+        </div>
+        
+        <!-- WebGPU Not Supported -->
+        <div id="noWebGPU" class="no-webgpu hidden">
+            <div class="no-webgpu-content">
+                <h2>WebGPU Not Supported</h2>
+                <p>This application requires WebGPU support.</p>
+                <p>Please use one of the following browsers:</p>
+                <ul>
+                    <li>Chrome/Edge 113 or later</li>
+                    <li>Firefox Nightly</li>
+                </ul>
+                <a href="https://caniuse.com/webgpu" target="_blank" class="button button-primary">Check Browser Support</a>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module" src="../src/main.ts"></script>
+</body>
+</html>
+

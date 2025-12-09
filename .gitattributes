@@ -1,0 +1,39 @@
+#
+# Git attributes for Visionary-PrePublic
+# Purpose:
+# - Normalize line endings to LF across platforms (reduce CRLF/LF conflicts)
+# - Mark binary assets to avoid text diffs/merges
+# - Leave optional knobs commented for future use (minified files, LFS)
+#
+
+# 1) Normalize text line endings to LF (cross-platform friendly)
+* text=auto eol=lf
+
+# 2) Binary assets (disable text diff/merge)
+*.onnx binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.svg  binary
+*.mp4  binary
+*.wasm binary
+*.glb  binary
+*.gltf binary
+*.zip  binary
+*.gz   binary
+*.tgz  binary
+*.tar  binary
+*.7z   binary
+*.ttf  binary
+*.otf  binary
+*.woff binary
+*.woff2 binary
+
+# 3) Optional: reduce noisy diffs on minified artifacts
+# *.min.js -diff
+# *.min.css -diff
+
+# 4) Optional: Git LFS (enable only if repository uses LFS)
+# *.onnx filter=lfs diff=lfs merge=lfs -text

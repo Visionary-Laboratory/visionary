@@ -1,0 +1,144 @@
+experiment:
+  type: lrm
+  seed: 42
+  parent: LHM-500M-training-from-scratch
+  child: LHM-500M 
+model:
+  model_name: SapDinoLRMBHSD3_5
+  encoder_type: dinov2_fusion
+  encoder_model_name: dinov2_vitl14_reg
+  encoder_feat_dim: 1024
+  encoder_freeze: false
+  fine_encoder_type: sapiens
+  fine_encoder_model_name: ./pretrained_models/sapiens/pretrained/checkpoints/sapiens_1b/sapiens_1b_epoch_173_torchscript.pt2
+  fine_encoder_feat_dim: 1536
+  fine_encoder_freeze: true
+  use_face_id: true
+  latent_query_points_type: e2e_smplx_sub1
+  pcl_dim: 1024
+  facesr: true
+  transformer_type: sd3_mm_bh_cond
+  transformer_heads: 16
+  transformer_dim: 1024
+  transformer_layers: 5
+  tf_grad_ckpt: true
+  encoder_grad_ckpt: true
+  human_model_path: ./pretrained_models/human_model_files
+  smplx_subdivide_num: 1
+  smplx_type: smplx_2
+  gs_query_dim: 1024
+  gs_use_rgb: true
+  gs_sh: 3
+  dense_sample_pts: 40000
+  gs_mlp_network_config:
+    n_neurons: 512
+    n_hidden_layers: 2
+    activation: silu
+  gs_xyz_offset_max_step: 1.0
+  gs_clip_scaling:
+  - 100
+  - 0.01
+  - 0.05
+  - 3000
+  expr_param_dim: 100
+  shape_param_dim: 10
+  fix_opacity: false
+  fix_rotation: false
+  cano_pose_type: 1
+dataset:
+  subsets:
+  - name: video_human_flame_ag
+    root_dirs: ./train_data/ClothVideo
+    meta_path:
+      train: ./train_data/ClothVideo/label/valid_id_with_img_list_27W.json
+      val: ./train_data/ClothVideo/label/valid_id_with_img_list_val.json
+    sample_rate: 1.0
+    use_flame: true
+    src_head_size: 112
+  - name: video_human_flame_v2_ag
+    root_dirs: ./train_data/ClothVideo
+    meta_path:
+      train: ./train_data/ClothVideo/label/valid_synthetic_data_train.json
+      val: ./train_data/ClothVideo/label/valid_synthetic_data_val.json
+    sample_rate: 1.0
+    use_flame: true
+    src_head_size: 112
+  sample_side_views: 7
+  source_image_res: 512 
+  render_image:
+    low: 384
+    high: 384
+    region: null
+  num_train_workers: 4
+  multiply: 16
+  num_val_workers: 2
+  pin_mem: true
+  repeat_num: 100
+train:
+  mixed_precision: bf16
+  find_unused_parameters: false
+  loss_func:
+    pixel_loss: l1
+    ball_loss:
+      type: heuristic
+      group:
+        head: 1.0
+        lower_body: 100.0
+        upper_body: 1000.0
+        hands: 10000.0
+    offset_loss:
+      type: classical
+      group:
+        head: 1.0
+        lower_body: 1.0
+        upper_body: 100.0
+        hands: 1000.0
+  loss:
+    pixel_weight: 0.0
+    masked_pixel_weight: 1.0
+    masked_head_weight: 0.0
+    perceptual_weight: 1.0
+    tv_weight: -1
+    mask_weight: 0:2.0:1.0:3000
+    face_id_weight: 0:0.01:0.05:3000
+    asap_weight: 0:1.0:10.0:3000
+    acap_weight: 0:1.0:1000.0:3000
+  optim:
+    lr: 0.0004
+    weight_decay: 0.05
+    beta1: 0.9
+    beta2: 0.95
+    clip_grad_norm: 0.1
+  scheduler:
+    type: cosine
+    warmup_real_iters: 3000
+  batch_size: 4
+  accum_steps: 1
+  epochs: 60
+  debug_global_steps: null
+  human_lrm: null
+val:
+  batch_size: 2
+  global_step_period: 1000
+  debug_batches: 10
+saver:
+  auto_resume: true
+  load_model: null
+  checkpoint_root: ./exps/checkpoints
+  checkpoint_global_steps: 1000
+  checkpoint_keep_level: 60
+logger:
+  stream_level: WARNING
+  log_level: INFO
+  log_root: ./exps/logs
+  tracker_root: ./exps/trackers
+  enable_profiler: false
+  trackers:
+  - tensorboard
+  image_monitor:
+    train_global_steps: 100
+    samples_per_log: 4
+compile:
+  suppress_errors: true
+  print_specializations: true
+  disable: true
