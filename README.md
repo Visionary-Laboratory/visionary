@@ -65,6 +65,8 @@ npm run dev
 After successful startup, visit the following address to view the example:
 👉 **http://localhost:3000/demo/simple/index.html**
 
+Feel free to try all our [demos](/demo/).
+
 ### 3. Model Assets
 
 ![Teaser](assets/examples.PNG)

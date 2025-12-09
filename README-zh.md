@@ -65,6 +65,8 @@ npm run dev
 启动成功后，访问以下地址查看示例：
 👉 **http://localhost:3000/demo/simple/index.html**
 
+其他示例详见[demo](/demo/).
+
 ### 3. 模型资产
 ![Teaser](assets/examples.PNG)
 ![Teaser](assets/examples2.PNG)
