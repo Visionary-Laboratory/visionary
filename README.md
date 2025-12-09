@@ -28,7 +28,7 @@ Neural rendering, particularly 3D Gaussian Splatting (3DGS), has evolved rapidly
 
 We have developed a powerful [Online Editor](https://ai4sports.opengvlab.com/index_visionary.html) based on Visionary to help users easily manage and edit 3D scenes in one click. If you want to develop your own web project using this project, please refer to [Quick Start](#quick-start).
 
-![Teaser](teaser.png)
+![Teaser](assets/teaser.png)
 
 ## ✨ Features
 
@@ -66,6 +66,9 @@ After successful startup, visit the following address to view the example:
 👉 **http://localhost:3000/demo/index.html**
 
 ### 3. Model Assets
+
+![Teaser](assets/examples.PNG)
+![Teaser](assets/examples2.PNG)
 
 You can import our provided example assets [ (1)](https://drive.google.com/drive/folders/1nk5slXl-_-jRyDggXoBpRwz2VajmQizQ?usp=drive_link)[ (2)](https://drive.google.com/file/d/1qRYffgZxNyiJrh9mwwjEOr3uoxcbll0Q/view?usp=share_link)[ (3)](https://drive.google.com/file/d/1F4XGS1W4c3Kc13n4YaoDNxnWZqOfvlBJ/view?usp=share_link) or your own 3DGS/4DGS/Avater assets in the page. For details on creating 4DGS/Avater/Custom assets, see [Convert to ONNX](#convert-to-onnx). 
 
