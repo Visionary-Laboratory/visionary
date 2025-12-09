@@ -44,7 +44,7 @@ Ensure that [Node.js](https://nodejs.org/) (v18+ recommended) is installed in yo
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/Visionary-PrePublic.git
+git clone https://github.com/Visionary-Laboratory/visionary.git
 cd Visionary-PrePublic
 
 # Install dependencies
@@ -58,7 +58,7 @@ npm run dev
 ```
 
 After successful startup, visit the following address to view the example:
-👉 **http://localhost:8901/demo/index.html**
+👉 **http://localhost:3000/demo/index.html**
 
 ### 3. Model Assets
 
@@ -66,7 +66,7 @@ You can import our provided [example assets](https://editor-url-placeholder) or 
 
 ## 🧠 Convert to ONNX
 
-This project supports rendering of various 3DGS/4DGS representations. To achieve this, trained 3D representations need to be exported to the ONNX format. This project provides conversion examples for 4DGS/Dynamic Avatar/Scaffold-GS, see [/examples](/examples/README.md) for details.
+This project supports rendering of various 3DGS/4DGS representations. To achieve this, trained 3D representations need to be exported to the ONNX format. This project provides conversion examples for 4DGS/Dynamic Avatar/Scaffold-GS, see [/examples](/examples/) for details.
 
 ## 🤝 Contributions & Acknowledgments
 
