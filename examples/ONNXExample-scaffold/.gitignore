@@ -1,0 +1,6 @@
+*.onnx
+*.ply
+*.pyc
+*.pt
+ckpt/*
+output

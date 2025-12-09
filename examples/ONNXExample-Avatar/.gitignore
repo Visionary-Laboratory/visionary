@@ -1,0 +1,14 @@
+assets/*
+smplx/*
+iteration_30000_bicycle/*
+ckpt/*
+iteration_30000/
+iteration_100000/
+pretrained_weights/*
+
+*.pyc
+data/
+
+
+pretrained_models/
+*.pyc
