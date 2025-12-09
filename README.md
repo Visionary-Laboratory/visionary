@@ -27,14 +27,14 @@ Additionally, we provide a powerful [Online Editor](https://editor-url-placehold
 
 ![Teaser](teaser.png)
 
-## ✨ Core Features
+## ✨ Features
 
 - **🚀 Native WebGPU Powered**: Utilizes `webgpu` to achieve high-performance parallel sorting and rendering of millions of Gaussian particles.
 - **🎨 Hybrid Rendering Architecture**: Automatically handles depth mixing (Depth Compositing) between Gaussian point clouds and standard Meshes, perfectly solving occlusion issues and supporting complex scene compositions.
 - **📦 Universal Asset Loader**: Single interface to intelligently identify and load multiple formats:
   - **Static Gaussians**: PLY, SPLAT, KSplat, SPZ, SOG
   - **Standard Mesh Models**: GLB, GLTF, FBX, OBJ
-  - **Dynamic Gaussians or Avater**: ONNX
+  - **4DGS/Avatar/scaffold-GS**: ONNX
 
 ## 🚀 Quick Start
 
@@ -45,7 +45,7 @@ Ensure that [Node.js](https://nodejs.org/) (v18+ recommended) is installed in yo
 ```bash
 # Clone the repository
 git clone https://github.com/Visionary-Laboratory/visionary.git
-cd Visionary-PrePublic
+cd visionary
 
 # Install dependencies
 npm install
@@ -62,7 +62,7 @@ After successful startup, visit the following address to view the example:
 
 ### 3. Model Assets
 
-You can import our provided [example assets](https://editor-url-placeholder) or your own 3DGS/4DGS assets in the page. For details on creating 4DGS assets, see [Convert to ONNX](#convert-to-onnx).
+You can import our provided [example assets](https://ai4sports.opengvlab.com/models/trex.onnx) or your own 3DGS/4DGS assets in the page. For details on creating 4DGS assets, see [Convert to ONNX](#convert-to-onnx).
 
 ## 🧠 Convert to ONNX
 

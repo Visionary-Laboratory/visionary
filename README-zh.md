@@ -27,16 +27,14 @@
 
 ![Teaser](teaser.png)
 
-## ✨ 核心特性
+## ✨ 项目特色
 
 - **🚀 原生 WebGPU 驱动**：利用 `three/webgpu` 与自定义 Compute Shader 光栅化器，实现百万级高斯粒子的高性能并行排序与渲染。
 - **🎨 混合渲染架构**：自动处理高斯点云与标准 Mesh 的深度混合（Depth Compositing），完美解决遮挡问题，支持复杂的场景组合。
 - **📦 统一资源加载 (Universal Loader)**：单一接口智能识别并加载多种格式：
   - **静态高斯**: PLY, SPLAT, KSplat, SPZ, SOG
-  - **标准模型**: GLB, GLTF, FBX, OBJ
-  - **动态高斯**: ONNX (4DGS)
-- **🧠 强大的 AI 推理**：深度集成 **ONNX Runtime Web (ORT)**，支持 4D 动态高斯模型的实时解码与播放，带来电影级的动态视觉体验。
-- **🛠️ 开发者友好**：提供基于 TypeScript 的模块化 API，易于集成到现有的 Web 应用中。
+  - **标准模型**: GLB, GLTF, FBX, OBJs
+  - **4DGS/Avatar/scaffold-GS**: ONNX
 
 ## 🚀 快速开始
 
@@ -47,7 +45,7 @@
 ```bash
 # 克隆仓库
 git clone https://github.com/Visionary-Laboratory/visionary.git
-cd Visionary-PrePublic
+cd visionary
 
 # 安装依赖
 npm install
@@ -64,7 +62,7 @@ npm run dev
 
 ### 3. 模型资产
 
-可以在页面中导入我们提供的[示例资产](https://editor-url-placeholder)，或自己的3DGS/4DGS资产。4DGS资产制作详见[转化ONNX格式](#转化ONNX格式)。
+可以在页面中导入我们提供的[示例资产](https://ai4sports.opengvlab.com/models/trex.onnx)，或自己的3DGS/4DGS资产。4DGS资产制作详见[转化ONNX格式](#转化ONNX格式)。
 
 ## 🧠 转化ONNX格式
 
