@@ -19,7 +19,7 @@
 
 ---
 
-> **TL;DR:** Visionary is an open, web-native platform built on WebGPU and ONNX Runtime. Enabling real-time rendering of diverse Gaussian Splatting variants (3DGS, MLP-based 3DGS, 4DGS, Neural Avatars and <span style="font-family: 'Brush Script MT', cursive; font-size: 1.2em; color: #FFD700; text-shadow: 1px 1px 2px black;">✨any future algorithms✨</span>), and traditional 3d Mesh, directly in the browser. We also support post-processing using feed-forward networks.
+> **TL;DR:** Visionary is an open, web-native platform built on WebGPU and ONNX Runtime. Enabling real-time rendering of diverse Gaussian Splatting variants (3DGS, MLP-based 3DGS, 4DGS, Neural Avatars and <span style="font-family: 'Brush Script MT', cursive; font-size: 1.2em; color: #FFD700; text-shadow: 1px 1px 2px black;">✨**any future algorithms**✨</span>), and traditional 3d Mesh, directly in the browser. We also support post-processing using feed-forward networks.
 
 <details>
 <summary><b>Abstract</b></summary>
