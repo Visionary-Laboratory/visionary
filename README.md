@@ -28,10 +28,12 @@ Neural rendering, particularly 3D Gaussian Splatting (3DGS), has evolved rapidly
 
 We have developed a powerful [Online Editor](https://ai4sports.opengvlab.com/index_visionary.html) based on Visionary to help users easily manage and edit 3D scenes in one click. If you want to develop your own web project using this project, please refer to [Quick Start](#quick-start).
 
-https://github.com/user-attachments/assets/397cff01-125a-49d9-8d03-c3acf553130d
+https://github.com/user-attachments/assets/6824de84-e4db-4c3f-90e8-1061ff309579
+
+## ✨ Feature
 
 
-## ✨ Features
+s
 
 - **⚡️ Native WebGPU Powered**: Utilizes `webgpu` to achieve high-performance parallel sorting and rendering of millions of Gaussian particles.
 - **🎨 Hybrid Rendering Architecture**: Automatically handles depth mixing (Depth Compositing) between Gaussian point clouds and standard Meshes, perfectly solving occlusion issues and supporting complex scene compositions.
