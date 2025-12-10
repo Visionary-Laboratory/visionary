@@ -64,6 +64,9 @@ pip install numpy==1.23.5
 从 HuggingFace 下载预训练模型和 GFPGAN 权重。
 
 ```bash
+# 确保您位于 ONNXExample-Avatar 目录结构中
+cd onnx-export\ONNXExample-Avatar
+
 # 下载仓库
 hf download MyNiuuu/Visionary_avatar --local-dir ./Visionary_avatar --local-dir-use-symlinks False
 
@@ -236,11 +239,10 @@ python train.py -s data/dnerf/hook --port 6017 --expname "dnerf/hook" --configs 
 
 ### **2.5 导出 ONNX**
 
-在 4D-GS 环境中，使用导出脚本（确保您位于 `ONNXExample` 目录结构中）：
+在 4D-GS 环境中，使用导出脚本（确保您位于 `onnx-export\ONNXExample-4dgs` 目录结构中）：
 
 ```bash
-git clone -b 4dgs https://github.com/Visionary-Laboratory/ONNXExample.git
-cd ONNXExample
+cd onnx-export\ONNXExample-4dgs
 
 python onnx_template.py --ply path/to/output/dnerf/hook/point_cloud/iteration_14000/point_cloud.ply \
                   --out your/prefered/onnxpath/gaussians4d.onnx
@@ -339,11 +341,10 @@ python train.py -s data/dataset_name/scenen -m output_path --appearance_dim 0
 
 ### **3.4 导出 ONNX**
 
-在 Scaffold-GS 环境中，使用导出脚本：
+在 Scaffold-GS 环境中，使用导出脚本（确保您位于 `onnx-export\ONNXExample-scaffold` 目录结构中）：
 
 ```bash
-git clone -b scaffold https://github.com/Visionary-Laboratory/ONNXExample.git
-cd ONNXExample
+cd onnx-export\ONNXExample-scaffold
 
 python onnx_template.py --ply output_path/point_cloud/iteration_30000/point_cloud.ply \
                         --cfg_args output_path/cfg_args \

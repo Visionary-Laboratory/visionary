@@ -76,6 +76,9 @@ pip install numpy==1.23.5
 Download pretrained models and GFPGAN weights from HuggingFace.
 
 ```bash
+# ensure you are in the ONNXExample-Avatar directory
+cd onnx-export\ONNXExample-Avatar
+
 # Download repository
 hf download MyNiuuu/Visionary_avatar --local-dir ./Visionary_avatar --local-dir-use-symlinks False
 
@@ -248,11 +251,10 @@ After training, the checkpoints and output are saved in ```./output/dnerf/hook``
 
 ### **2.5 Exporting ONNX**
 
-In the 4D-GS environment, use the exporter script (ensure you are in the `ONNXExample` directory structure):
+In the 4D-GS environment, use the exporter script (ensure you are in the `onnx-export\ONNXExample-4dgs` directory structure):
 
 ```bash
-git clone -b 4dgs https://github.com/Visionary-Laboratory/ONNXExample.git
-cd ONNXExample
+cd onnx-export\ONNXExample-4dgs
 
 python onnx_template.py --ply path/to/output/dnerf/hook/point_cloud/iteration_14000/point_cloud.ply \
                   --out your/prefered/onnxpath/gaussians4d.onnx
@@ -351,11 +353,10 @@ After Training, the output folder will be like:
 
 ### **3.4 Exporting ONNX**
 
-In the Scaffold-GS environment, use the exporter script:
+In the Scaffold-GS environment, use the exporter script(ensure you are in the `onnx-export\ONNXExample-scaffold` directory structure):
 
 ```bash
-git clone -b scaffold https://github.com/Visionary-Laboratory/ONNXExample.git
-cd ONNXExample
+cd onnx-export\ONNXExample-scaffold
 
 python onnx_template.py --ply output_path/point_cloud/iteration_30000/point_cloud.ply \
                         --cfg_args output_path/cfg_args \
