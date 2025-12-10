@@ -33,8 +33,6 @@ https://github.com/user-attachments/assets/6824de84-e4db-4c3f-90e8-1061ff309579
 ## ✨ Feature
 
 
-s
-
 - **⚡️ Native WebGPU Powered**: Utilizes `webgpu` to achieve high-performance parallel sorting and rendering of millions of Gaussian particles.
 - **🎨 Hybrid Rendering Architecture**: Automatically handles depth mixing (Depth Compositing) between Gaussian point clouds and standard Meshes, perfectly solving occlusion issues and supporting complex scene compositions.
 - **📦 Universal Asset Loader**: Single interface to intelligently identify and load multiple formats:
