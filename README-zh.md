@@ -13,7 +13,7 @@
 <h1 style="font-size:32px; margin: 6px 0 4px 0;">Visionary：面向下一代"大世界模型"的web渲染引擎</h1>
 <p style="margin: 0 0 12px 0; font-size: 14px;">上海人工智能实验室 · 四川大学 · 东京大学 · 上海交通大学 · 西北工业大学</p>
 
-[项目主页](https://visionary-laboratory.github.io/visionary/) | [论文](https://arxiv.org/abs/2512.08478) | [视频](https://youtu.be/-K8EjMfk09c) | [WebGPU常见问题](https://github.com/Visionary-Laboratory/visionary/issues/1) | 文档
+[项目主页](https://visionary-laboratory.github.io/visionary/) | [论文](https://arxiv.org/abs/2512.08478) | [视频](https://youtu.be/-K8EjMfk09c) | [WebGPU常见问题](https://github.com/Visionary-Laboratory/visionary/issues/1) | [文档](https://ai4sports.opengvlab.com/help/zh/index.html)
 </div>
 
 ---
