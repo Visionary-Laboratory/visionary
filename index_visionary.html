@@ -25,6 +25,316 @@
     </iframe>
     <script src="/scripts/iframeassist.js"></script>
     <script>
+class IframeFileSystemAssist {
+    constructor(iframeElement) {
+        this.iframe = iframeElement;
+        this.handleStore = new Map();
+        this.nextHandleId = 1;
+        this.init();
+    }
+
+    /**
+     * 初始化消息监听器
+     */
+    init() {
+        window.addEventListener('message', async (event) => {
+            await this.handleMessage(event);
+        });
+    }
+
+    /**
+     * 处理来自 iframe 的消息
+     */
+    async handleMessage(event) {
+        console.log('主窗口收到消息:', event.data);
+        console.log('消息来源 origin:', event.origin);
+        console.log('消息来源 source:', event.source);
+        console.log('iframe contentWindow:', this.iframe?.contentWindow);
+
+        if (event.data.type === 'SHOW_DIRECTORY_PICKER_REQUEST') {
+            await this.handleDirectoryPickerRequest(event);
+        } else if (event.data.type === 'FILE_OPERATION_REQUEST') {
+            await this.handleFileOperationRequest(event);
+        }
+    }
+
+    /**
+     * 处理文件选择器请求
+     */
+    async handleDirectoryPickerRequest(event) {
+        const { requestId, options } = event.data;
+        const targetWindow = event.source;
+        const targetOrigin = event.origin;
+
+        console.log('准备调用 showDirectoryPicker, requestId:', requestId);
+
+        try {
+            // 检查 API 是否可用
+            if (!window.showDirectoryPicker) {
+                throw new Error('File System Access API is not supported in this browser');
+            }
+
+            // 使用传入的 options（包含 mode 参数）
+            const handle = await window.showDirectoryPicker(options || { mode: 'readwrite' });
+
+            console.log('文件选择器成功，返回 handle:', handle.name);
+            console.log('准备发送响应到子窗口, requestId:', requestId);
+
+            // 由于 FileSystemDirectoryHandle 无法通过跨域 postMessage 传递
+            // 我们使用代理模式：主窗口保存 handle，子窗口通过 handleId 引用
+            const handleId = this.createHandleId();
+            this.handleStore.set(handleId, {
+                handle: handle,
+                name: handle.name,
+                createdAt: Date.now()
+            });
+
+            console.log('已保存 handle 到存储，handleId:', handleId, 'handleName:', handle.name);
+
+            // 构建响应消息（不包含实际的 handle 对象）
+            const responseMessage = {
+                type: 'SHOW_DIRECTORY_PICKER_RESPONSE',
+                requestId: String(requestId),
+                success: true,
+                handleId: handleId,
+                handleName: handle.name,
+                _debug: {
+                    handleName: handle.name,
+                    handleId: handleId,
+                    timestamp: Date.now()
+                }
+            };
+
+            console.log('响应消息内容:', responseMessage);
+            console.log('准备发送到 targetWindow:', targetWindow);
+
+            // 跨域情况下，必须使用 event.source 和 '*' 作为 targetOrigin
+            if (targetWindow && typeof targetWindow.postMessage === 'function') {
+                try {
+                    console.log('发送响应消息到子窗口, requestId:', requestId, 'handleId:', handleId);
+                    targetWindow.postMessage(responseMessage, '*');
+                    console.log('✅ 响应消息已发送成功 (使用 handleId 代理模式)');
+                } catch (e) {
+                    console.error('❌ 发送响应消息失败:', e);
+                    // 清理存储的 handle
+                    this.handleStore.delete(handleId);
+                }
+            } else {
+                console.error('❌ targetWindow 不可用或 postMessage 不是函数');
+                this.handleStore.delete(handleId);
+            }
+        } catch (error) {
+            console.error('文件选择器错误:', error);
+            this.sendErrorResponse(targetWindow, requestId, error);
+        }
+    }
+
+    /**
+     * 处理文件操作请求
+     */
+    async handleFileOperationRequest(event) {
+        const { handleId, operation, params, requestId } = event.data;
+
+        console.log('收到文件操作请求:', { handleId, operation, requestId });
+
+        const handleEntry = this.handleStore.get(handleId);
+        if (!handleEntry) {
+            event.source.postMessage({
+                type: 'FILE_OPERATION_RESPONSE',
+                requestId: requestId,
+                success: false,
+                error: 'Handle not found or expired'
+            }, '*');
+            return;
+        }
+
+        const handle = handleEntry.handle;
+
+        try {
+            const result = await this.executeFileOperation(handle, handleId, operation, params);
+
+            event.source.postMessage({
+                type: 'FILE_OPERATION_RESPONSE',
+                requestId: requestId,
+                success: true,
+                result: result
+            }, '*');
+        } catch (error) {
+            event.source.postMessage({
+                type: 'FILE_OPERATION_RESPONSE',
+                requestId: requestId,
+                success: false,
+                error: error.message || 'Operation failed'
+            }, '*');
+        }
+    }
+
+    /**
+     * 执行文件操作
+     */
+    async executeFileOperation(handle, handleId, operation, params) {
+        switch (operation) {
+            case 'getDirectoryHandle': {
+                const dirHandle = await handle.getDirectoryHandle(params.name, params.options);
+                const nestedHandleId = this.createHandleId();
+                this.handleStore.set(nestedHandleId, {
+                    handle: dirHandle,
+                    name: dirHandle.name,
+                    createdAt: Date.now()
+                });
+                return {
+                    handleId: nestedHandleId,
+                    handleName: dirHandle.name,
+                    kind: 'directory'
+                };
+            }
+            case 'getFileHandle': {
+                const fileHandle = await handle.getFileHandle(params.name, params.options);
+                const fileHandleId = this.createHandleId();
+                this.handleStore.set(fileHandleId, {
+                    handle: fileHandle,
+                    name: fileHandle.name,
+                    createdAt: Date.now()
+                });
+                return {
+                    handleId: fileHandleId,
+                    handleName: fileHandle.name,
+                    kind: 'file'
+                };
+            }
+            case 'removeEntry':
+                await handle.removeEntry(params.name, params.options);
+                return { success: true };
+            case 'resolve':
+                return await handle.resolve(params.possiblePath);
+            case 'queryPermission':
+                return await handle.queryPermission(params.descriptor);
+            case 'requestPermission':
+                return await handle.requestPermission(params.descriptor);
+            case 'entries': {
+                // 获取文件夹中的所有条目
+                const entries = [];
+                for await (const [name, entryHandle] of handle) {
+                    const entryHandleId = this.createHandleId();
+                    this.handleStore.set(entryHandleId, {
+                        handle: entryHandle,
+                        name: entryHandle.name,
+                        createdAt: Date.now()
+                    });
+                    entries.push([
+                        name,
+                        {
+                            handleId: entryHandleId,
+                            handleName: entryHandle.name,
+                            kind: entryHandle.kind
+                        }
+                    ]);
+                }
+                return entries;
+            }
+            case 'getFile': {
+                // 获取文件内容
+                const file = await handle.getFile();
+                return file;
+            }
+            case 'writableCreate': {
+                // 创建可写流（在主窗口端）
+                return { success: true };
+            }
+            case 'writableWrite': {
+                // 写入数据到文件
+                const fileHandle = this.handleStore.get(handleId)?.handle;
+                if (!fileHandle || fileHandle.kind !== 'file') {
+                    throw new Error('Invalid file handle for write operation');
+                }
+                const writable = await fileHandle.createWritable({ keepExistingData: true });
+                await writable.seek(params.position || 0);
+                await writable.write(params.data);
+                await writable.close();
+                return { success: true };
+            }
+            case 'writableSeek': {
+                // 定位流位置（在主窗口端管理）
+                return { success: true };
+            }
+            case 'writableTruncate': {
+                // 截断文件
+                const fileHandle = this.handleStore.get(handleId)?.handle;
+                if (!fileHandle || fileHandle.kind !== 'file') {
+                    throw new Error('Invalid file handle for truncate operation');
+                }
+                const writable = await fileHandle.createWritable();
+                await writable.truncate(params.size);
+                await writable.close();
+                return { success: true };
+            }
+            case 'writableClose': {
+                // 关闭流（在主窗口端管理）
+                return { success: true };
+            }
+            default:
+                throw new Error(`Unknown operation: ${operation}`);
+        }
+    }
+
+    /**
+     * 发送错误响应
+     */
+    sendErrorResponse(targetWindow, requestId, error) {
+        const errorResponse = {
+            type: 'SHOW_DIRECTORY_PICKER_RESPONSE',
+            requestId: requestId,
+            success: false,
+            error: error.name === 'AbortError'
+                ? 'User cancelled folder selection'
+                : (error.message || 'Failed to show directory picker')
+        };
+
+        // 处理用户取消操作
+        if (error.name === 'AbortError') {
+            console.log('用户取消了文件夹选择');
+        }
+
+        // 发送错误响应（跨域时使用 '*'）
+        if (targetWindow && targetWindow.postMessage) {
+            try {
+                targetWindow.postMessage(errorResponse, '*');
+                console.log('错误响应已发送');
+            } catch (e) {
+                console.error('发送错误响应失败:', e);
+                // 备用方案
+                if (this.iframe && this.iframe.contentWindow) {
+                    try {
+                        this.iframe.contentWindow.postMessage(errorResponse, '*');
+                    } catch (e2) {
+                        console.error('所有错误响应发送方式都失败:', e2);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 创建唯一的 handleId
+     */
+    createHandleId() {
+        return `handle_${this.nextHandleId++}_${Date.now()}`;
+    }
+
+    /**
+     * 清理过期的 handle（可选，用于内存管理）
+     */
+    cleanupExpiredHandles(maxAge = 3600000) { // 默认1小时
+        const now = Date.now();
+        for (const [handleId, entry] of this.handleStore.entries()) {
+            if (now - entry.createdAt > maxAge) {
+                this.handleStore.delete(handleId);
+                console.log('清理过期 handle:', handleId);
+            }
+        }
+    }
+}
+
         // 获取 iframe 元素
         const iframe = document.getElementById('visionaryFrame');
 
