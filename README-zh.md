@@ -39,6 +39,16 @@ https://github.com/user-attachments/assets/6824de84-e4db-4c3f-90e8-1061ff309579
   - **4DGS/Avatar/scaffold-GS**: ONNX
   - **<span style="font-family: 'Brush Script MT', cursive; font-size: 1.1em; color: #FF4500;">🔥自定义算法</span>**: 详见 [导出算法至 ONNX](onnx-export/README.md)。
 
+
+## WebGPU 环境要求与已知问题
+
+- **浏览器：** 需要较新的 Chrome（或其他基于 Chromium 的浏览器），并开启 WebGPU。
+- **推荐平台：** 推荐使用 Windows 10/11 + **独立显卡**（NVIDIA / AMD），以获得相对稳定的性能。
+- **Ubuntu：** 目前由于 Chrome 在 Ubuntu 上的 WebGPU 存在 bug，导致 fp16 不受支持，本项目的 fp16 ONNX 流水线无法正常运行，**暂不支持 Ubuntu**，需要等待官方修复后再开启支持。
+- **macOS：** 大多数 Mac 的 GPU 性能有限，不适合重负载的 3D Gaussian Splatting。除非使用 M4 Max 等高端芯片，否则**不推荐**作为主要运行环境，实际体验可能会非常卡顿。
+
+
+
 <a id="quick-start"></a>
 <a id="快速开始"></a>
 ## 🚀 快速开始
