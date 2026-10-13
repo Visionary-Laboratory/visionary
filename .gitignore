@@ -43,3 +43,8 @@ datasets/
 package-lock.json
 
 models/
+
+.claude/
+.agents/
+.codebuddy/
+skills-lock.json
