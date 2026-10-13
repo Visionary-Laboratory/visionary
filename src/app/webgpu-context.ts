@@ -1,4 +1,5 @@
 import * as ort from 'onnxruntime-web/webgpu';
+import { getDefaultOrtWasmPaths } from '../config/ort-config';
 
 // 默认 dummy 模型的 URL（打包时随包发布）
 // 注意：visionary 开源版无 public/ 目录，根路径 '/models/...' 在生产构建中无法解析，
@@ -143,7 +144,7 @@ async function createOrtDummySession(dummyModelUrl: string): Promise<void> {
   //ort.env.logLevel = 'verbose'
   // 确保WASM路径已设置
   if (!ort.env.wasm.wasmPaths) {
-    ort.env.wasm.wasmPaths = '/src/ort/';
+    ort.env.wasm.wasmPaths = getDefaultOrtWasmPaths();
     console.log('[WebGPU] Setting default WASM paths:', ort.env.wasm.wasmPaths);
   } else {
     console.log('[WebGPU] Using existing WASM paths:', ort.env.wasm.wasmPaths);

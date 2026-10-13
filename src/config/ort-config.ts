@@ -3,7 +3,9 @@
  * 提供灵活的路径配置，避免硬编码
  */
 
-let ortWasmPaths: string = '/src/ort/';
+const FALLBACK_ORT_WASM_PATHS = '/src/ort/';
+
+let ortWasmPaths: string | null = null;
 
 /**
  * 设置 ONNX Runtime WASM 文件路径
@@ -22,6 +24,9 @@ export function setOrtWasmPaths(paths: string | string[]): void {
  * @returns 当前配置的路径
  */
 export function getOrtWasmPaths(): string {
+  if (!ortWasmPaths) {
+    ortWasmPaths = getDefaultOrtWasmPaths();
+  }
   return ortWasmPaths;
 }
 
@@ -63,10 +68,15 @@ export function initOrtEnvironment(wasmPaths?: string | string[]): void {
 }
 
 /**
- * 获取默认的 WASM 路径
+ * 默认 WASM 目录与当前 HTML 同级的 src/ort/。
+ * 返回完整 URL，供 onnxruntime-web 作为 wasmPaths 前缀（须以 / 结尾）。
+ * 相对字符串会被 import() 按 JS chunk 所在目录解析，部署后会指到 assets/ 下。
  */
 export function getDefaultOrtWasmPaths(): string {
-  return '/src/ort/';
+  if (typeof window === 'undefined' || !window.location?.href) {
+    return FALLBACK_ORT_WASM_PATHS;
+  }
+  return new URL('src/ort/', window.location.href).href;
 }
 
 /**

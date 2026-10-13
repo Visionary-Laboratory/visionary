@@ -26,6 +26,15 @@ export { CameraAdapter } from './camera/CameraAdapter';
 // 文件加载器
 export { defaultLoader } from './io';
 
+// 统一场景保存
+export {
+  saveUnifiedScene,
+  type SaveUnifiedSceneModel,
+  type SaveUnifiedSceneKeyframe,
+  type SaveUnifiedSceneSceneEntry,
+  type SaveUnifiedSceneParams
+} from './io/unified-scene-saver';
+
 // 管理器
 export {
   ModelManager,
@@ -38,6 +47,27 @@ export {
 
 // ONNX 功能
 export { ONNXModelTester } from './ONNX/test_loader';
+export { OnnxGpuIO } from './ONNX/onnx_gpu_io';
+export type { OnnxGpuIOConfig } from './ONNX/onnx_gpu_io';
+
+// 场景与模型
+export { SceneFS } from './app/scene-fs';
+export { GaussianModel } from './app/GaussianModel';
+export { EnvMapHelper } from './utils/env-map-helper';
+
+// 录制与导出
+export {
+  RecordingCamera,
+  exportVideoWithRecordingCamera,
+  VideoCodec,
+  VideoQuality,
+} from './exportMedia';
+export type { RecordingEnhancementOptions } from './exportMedia/exportVideo';
+export type { ITimelineController } from './exportMedia';
+
+// Gizmo
+export { GizmoManager } from './gizmo';
+export type { GizmoMode, GizmoEvent } from './gizmo';
 
 // 工具函数
 export { clamp } from './app/dom-elements';

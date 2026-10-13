@@ -4,6 +4,7 @@ import { readONNXCountBuffer } from '../utils/debug-gpu-buffers';
 import { mat4 } from "gl-matrix";
 import { PrecisionMetadata, PrecisionConfig, calcSizeInBytes, dataTypeToOrtString } from './precision-types';
 import { PrecisionDetector } from './precision-detector';
+import { getOrtWasmPaths } from '../config/ort-config';
 export type OnnxGpuIOConfig = {
   modelUrl: string;            // ONNX 模型路径
   maxPoints?: number;          // 预设最大点数（可选，会从metadata推断）
@@ -129,8 +130,7 @@ export class OnnxGpuIO {
 
 
       // this.log("profiling enbabled")
-      ort.env.wasm.wasmPaths = '/src/ort/'; // Ensure WASM files are accessible
-      // 路径配置现在通过 initOrtEnvironment 函数处理
+      ort.env.wasm.wasmPaths = getOrtWasmPaths();
       
       // Set the WebGPU device for ONNX Runtime to use the same device
       // ort.env.webgpu.device =  cfg.device ;
