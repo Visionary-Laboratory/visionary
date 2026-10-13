@@ -23,7 +23,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && npm run build:types",
-    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
+    "build:types": "tsc --declaration --emitDeclarationOnly --noEmit false --outDir dist",
     "preview": "vite preview",
     "fix_onnx": "node scripts/fix_onnx.mjs",
     "fix_onnx_src": "node scripts/fix_onnx.mjs src/ort",
@@ -48,6 +48,7 @@
   "dependencies": {
     "claude": "^0.1.1",
     "gl-matrix": "^3.4.3",
+    "mp4-muxer": "5.2.2",
     "onnxruntime-web": "1.22.0",
     "three": "^0.171.0"
   }
