@@ -379,13 +379,14 @@ export class PLYLoader implements ILoader<PLYGaussianData> {
     const extraBytes = Math.max(1, N) * 16;
     const weightBytes = hasWeights ? N * 64 * 4 : 0;
     const splatBytes = Math.max(1, N) * SPLAT_STRIDE;
-    this.assertGpuBufferSizes(device, [
+    const storageBufferSizes: Array<[string, number]> = [
       ['gaussians', gaussBytes],
       ['sh', shBytes],
       ['extra_pca', extraBytes],
-      ['weights', weightBytes],
       ['splat2d', splatBytes],
-    ]);
+    ];
+    if (hasWeights) storageBufferSizes.push(['weights', weightBytes]);
+    this.assertGpuBufferSizes(device, storageBufferSizes);
 
     let gaussianBuffer: GPUBuffer | null = null;
     let shBuffer: GPUBuffer | null = null;
@@ -565,10 +566,14 @@ export class PLYLoader implements ILoader<PLYGaussianData> {
   }
 
   private assertGpuBufferSizes(device: GPUDevice, sizes: Array<[string, number]>): void {
-    const max = device.limits.maxBufferSize;
+    // Each buffer is bound as a whole storage buffer, including splat2d created later.
+    const limits = ['maxBufferSize', 'maxStorageBufferBindingSize'] as const;
     for (const [label, bytes] of sizes) {
-      if (bytes > max) {
-        throw new Error(`GPU buffer "${label}" 需要 ${bytes} 字节，设备 maxBufferSize 为 ${max}`);
+      for (const limit of limits) {
+        const max = device.limits[limit];
+        if (bytes > max) {
+          throw new Error(`GPU buffer "${label}" 需要 ${bytes} 字节，设备 ${limit} 为 ${max}`);
+        }
       }
     }
   }

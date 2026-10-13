@@ -22,6 +22,7 @@
   ],
   "scripts": {
     "dev": "vite",
+    "test": "node --import tsx --test tests/*.test.ts",
     "build": "vite build && npm run build:types",
     "build:types": "tsc --declaration --emitDeclarationOnly --noEmit false --outDir dist",
     "preview": "vite preview",
