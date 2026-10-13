@@ -267,7 +267,7 @@ export class GaussianLoader {
     }
 
     /**
-     * 本地 File 不经过 blob URL。普通 PLY 走 loadLocalPly，大文件在其中分块上传。
+     * 本地 Gaussian File 不经过 blob URL，由 FileLoader 统一预检查并选择加载路线。
      */
     private async createFromLocalFile(
         renderer: THREE.WebGPURenderer,
@@ -295,10 +295,7 @@ export class GaussianLoader {
         }
 
         const device = (renderer.backend as any).device as GPUDevice;
-        const isPlainPly = lower.endsWith('.ply') && !lower.endsWith('.compressed.ply');
-        const entry = isPlainPly
-            ? await this.fileLoader.loadLocalPly(file, device, options?.onProgress)
-            : await this.fileLoader.loadGaussianFile(file, device);
+        const entry = await this.fileLoader.loadGaussianFile(file, device, options?.onProgress);
         if (!entry) {
             throw new Error(`Failed to load Gaussian file: ${file.name}`);
         }

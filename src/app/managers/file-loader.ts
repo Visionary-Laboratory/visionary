@@ -46,17 +46,17 @@ export class FileLoader {
     try {
       this.showProgress(true, "Reading file...", 10);
 
-      // Debug: print first 16 bytes
-      file.arrayBuffer().then(buf => {
-        console.log("[FileLoader] First 16 bytes:", new Uint8Array(buf).slice(0, 16));
-      });
-
       // Check capacity
       if (this.modelManager.isAtCapacity()) {
         this.showProgress(false);
         this.showError(`Reached model limit (${this.modelManager.getRemainingCapacity()}). Remove models before adding more.`);
         return null;
       }
+
+      // Debug: print first 16 bytes only after the capacity check.
+      file.arrayBuffer().then(buf => {
+        console.log("[FileLoader] First 16 bytes:", new Uint8Array(buf).slice(0, 16));
+      });
       
       const fileName = file.name.toLowerCase();
       
@@ -142,13 +142,10 @@ export class FileLoader {
    * Smaller PLY files keep the existing whole-buffer loader.
    */
   async loadLocalPly(file: File, device: GPUDevice, onProgress?: (progress: number) => void): Promise<ModelEntry | null> {
-    if (file.size < PLY_STREAM_MIN_BYTES) {
-      return this.loadGaussianFile(file, device);
-    }
-    if (this.modelManager.isAtCapacity()) {
-      this.showError('Reached model limit. Remove models before adding more.');
-      return null;
-    }
+    return this.loadGaussianFile(file, device, onProgress);
+  }
+
+  private async loadStreamingPly(file: File, device: GPUDevice, onProgress?: (progress: number) => void): Promise<ModelEntry> {
     const uploaded = await new PLYLoader().loadFileStreaming(file, device, {
       onProgress: (progress) => {
         this.showProgress(true, progress.stage, progress.progress * 100);
@@ -192,8 +189,20 @@ export class FileLoader {
   /**
    * Load Gaussian format file from File object
    * Supports: PLY, SPZ, KSplat, SPLAT, SOG, Compressed PLY
+   * Checks capacity before routing plain PLY at/above 1.5GiB to streaming.
+   * onProgress reports 0..1 for streaming PLY; loading callbacks cover all formats.
    */
-  async loadGaussianFile(file: File, device: GPUDevice): Promise<ModelEntry | null> {
+  async loadGaussianFile(file: File, device: GPUDevice, onProgress?: (progress: number) => void): Promise<ModelEntry | null> {
+    // Reject before choosing a parser or allocating/uploading GPU buffers.
+    if (this.modelManager.isAtCapacity()) {
+      this.showError('Reached model limit. Remove models before adding more.');
+      return null;
+    }
+    const lower = file.name.toLowerCase();
+    const isPlainPly = lower.endsWith('.ply') && !lower.endsWith('.compressed.ply');
+    if (isPlainPly && file.size >= PLY_STREAM_MIN_BYTES) {
+      return this.loadStreamingPly(file, device, onProgress);
+    }
     const format = detectGaussianFormat(file.name) || 'unknown';
     console.log(`[FileLoader] Loading ${format.toUpperCase()} file:`, file.name);
     
