@@ -9,11 +9,15 @@ import {
   isGaussianFormat, 
   detectGaussianFormat, 
   isGaussianDataSource as isGaussianDataSourceFromIO,
+  PLYLoader,
   type GaussianDataSource 
 } from "../../io";
 import { ModelManager } from "./model-manager";
 import { ModelEntry } from "../../models/model-entry";
 import { FBXLoaderManager } from "./fbx-loader";
+import type { StreamedGaussianGPU } from "../../io/ply_loader";
+
+const PLY_STREAM_MIN_BYTES = Math.floor(1.5 * 1024 * 1024 * 1024);
 
 export interface LoadProgress {
   stage: string;
@@ -134,10 +138,62 @@ export class FileLoader {
   }
 
   /**
+   * Plain PLY above 1.5GiB is parsed in chunks and uploaded to GPU.
+   * Smaller PLY files keep the existing whole-buffer loader.
+   */
+  async loadLocalPly(file: File, device: GPUDevice, onProgress?: (progress: number) => void): Promise<ModelEntry | null> {
+    if (file.size < PLY_STREAM_MIN_BYTES) {
+      return this.loadGaussianFile(file, device);
+    }
+    if (this.modelManager.isAtCapacity()) {
+      this.showError('Reached model limit. Remove models before adding more.');
+      return null;
+    }
+    const uploaded = await new PLYLoader().loadFileStreaming(file, device, {
+      onProgress: (progress) => {
+        this.showProgress(true, progress.stage, progress.progress * 100);
+        onProgress?.(progress.progress);
+      },
+    });
+    return this.createGaussianModelFromGPU(uploaded, file.name);
+  }
+
+  private async createGaussianModelFromGPU(uploaded: StreamedGaussianGPU, name: string): Promise<ModelEntry> {
+    const { PointCloud } = await import('../../point_cloud');
+    let pc: InstanceType<typeof PointCloud>;
+    try {
+      pc = new PointCloud(uploaded.device, uploaded.meta, {
+        gaussianBuffer: uploaded.gaussianBuffer,
+        shBuffer: uploaded.shBuffer,
+        extraPcaBuffer: uploaded.extraPcaBuffer,
+        weightBuffer: uploaded.weightBuffer,
+      });
+    } catch (error) {
+      uploaded.gaussianBuffer.destroy();
+      uploaded.shBuffer.destroy();
+      uploaded.extraPcaBuffer.destroy();
+      uploaded.weightBuffer?.destroy();
+      throw error;
+    }
+    const uniqueName = this.modelManager.generateUniqueName(name);
+    const entry = this.modelManager.addModel({
+      name: uniqueName,
+      visible: true,
+      pointCloud: pc,
+      pointCount: pc.numPoints,
+      isDynamic: false,
+      modelType: 'ply',
+    });
+    this.showProgress(false);
+    console.log('[FileLoader] Streamed PLY model:', uniqueName, 'points:', pc.numPoints);
+    return entry;
+  }
+
+  /**
    * Load Gaussian format file from File object
    * Supports: PLY, SPZ, KSplat, SPLAT, SOG, Compressed PLY
    */
-  private async loadGaussianFile(file: File, device: GPUDevice): Promise<ModelEntry | null> {
+  async loadGaussianFile(file: File, device: GPUDevice): Promise<ModelEntry | null> {
     const format = detectGaussianFormat(file.name) || 'unknown';
     console.log(`[FileLoader] Loading ${format.toUpperCase()} file:`, file.name);
     

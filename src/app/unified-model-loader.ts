@@ -310,23 +310,21 @@ export class UnifiedModelLoader {
     // 保存原始 File 对象
     const sourceFile = options.sourceFile || (input instanceof File ? input : undefined);
 
-    // 直接使用 GaussianLoader，它已经处理了 File/URL/Blob 的转换
+    // 本地 File 直接传入。大 PLY 在 FileLoader 里分块解析并写入 GPU，不再转成 blob URL。
     const gaussianModel = await this.gaussianLoader.createFromFile(
       this.renderer,
-      input instanceof File ? URL.createObjectURL(input) : input,
+      input,
       {
         camMat: options.cameraMatrix || new Float32Array(16),
         projMat: options.projectionMatrix || new Float32Array(16),
         ...options.gaussianOptions
       },
-      options.gaussianOptions,
+      {
+        ...options.gaussianOptions,
+        onProgress: options.onProgress,
+      },
       specificFormat as any
     );
-
-    // 清理 blob URL
-    if (input instanceof File) {
-      URL.revokeObjectURL(URL.createObjectURL(input));
-    }
 
     // 添加到场景
     this.scene.add(gaussianModel);

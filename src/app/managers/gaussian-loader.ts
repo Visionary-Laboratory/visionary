@@ -15,6 +15,8 @@ import { PointCloud } from "../../point_cloud";
 export interface GaussianLoadOptions {
     name?: string;
     onnxOptions?: ONNXLoadOptions;
+    /** 0..1，大 PLY 流式上传时回调 */
+    onProgress?: (progress: number) => void;
 }
 
 /**
@@ -210,11 +212,14 @@ export class GaussianLoader {
      */
     async createFromFile(
         renderer: THREE.WebGPURenderer,
-        modelPath: string,
+        modelPath: string | File,
         cameraMatrices?: { camMat: Float32Array; projMat: Float32Array },
         options?: GaussianLoadOptions,
         fileType?: string
     ): Promise<GaussianModel> {
+        if (modelPath instanceof File) {
+            return this.createFromLocalFile(renderer, modelPath, cameraMatrices, options);
+        }
         // Use provided fileType or detect from path
         const detectedFileType = fileType || this.fileLoader.getFileType(modelPath);
         // console.log('detectedFileType', detectedFileType);
@@ -258,6 +263,48 @@ export class GaussianLoader {
      * Useful when you already have a ModelEntry from other sources
      */
     createFromEntry(entry: ModelEntry): GaussianModel {
+        return new GaussianModel(entry);
+    }
+
+    /**
+     * 本地 File 不经过 blob URL。普通 PLY 走 loadLocalPly，大文件在其中分块上传。
+     */
+    private async createFromLocalFile(
+        renderer: THREE.WebGPURenderer,
+        file: File,
+        cameraMatrices?: { camMat: Float32Array; projMat: Float32Array },
+        options?: GaussianLoadOptions
+    ): Promise<GaussianModel> {
+        const lower = file.name.toLowerCase();
+        if (lower.endsWith('.onnx')) {
+            if (!cameraMatrices) {
+                throw new Error(`ONNX file ${file.name} requires camera matrices`);
+            }
+            const url = URL.createObjectURL(file);
+            try {
+                return await this.createFromONNX(
+                    renderer,
+                    url,
+                    cameraMatrices.camMat,
+                    cameraMatrices.projMat,
+                    options
+                );
+            } finally {
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        const device = (renderer.backend as any).device as GPUDevice;
+        const isPlainPly = lower.endsWith('.ply') && !lower.endsWith('.compressed.ply');
+        const entry = isPlainPly
+            ? await this.fileLoader.loadLocalPly(file, device, options?.onProgress)
+            : await this.fileLoader.loadGaussianFile(file, device);
+        if (!entry) {
+            throw new Error(`Failed to load Gaussian file: ${file.name}`);
+        }
+        if (options?.name) {
+            entry.name = options.name;
+        }
         return new GaussianModel(entry);
     }
 

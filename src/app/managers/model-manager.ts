@@ -323,8 +323,11 @@ export class ModelManager {
 
     const out = mat4.create();
     mat4.fromRotationTranslationScale(out, rotationQ, translation, scale);
-    model.pointCloud.setTransform(out);
-    console.log(`Model ${model.name} transform updated (pos=${translation.join(',')}, scale=${scale.join(',')})`);
+    // model.pointCloud.setTransform(out);
+    // console.log(`Model ${model.name} transform updated (pos=${translation.join(',')}, scale=${scale.join(',')})`);
+
+    model.pointCloud.setTransform(Float32Array.from(out));
+    console.log(`Model ${model.name} transform updated (pos=${Array.from(translation).join(',')}, scale=${Array.from(scale).join(',')})`);
     return true;
   }
 

@@ -1,6 +1,6 @@
 import { f32_to_f16, makeCopySH_PackedF16 } from '../utils/half';
 import { buildCov, sigmoid, shDegreeFromNumCoeffs } from '../utils';
-import { planeFromPoints } from '../utils/vector-math';
+import { accumulatePoint, createPointMoments, planeFromMoments, planeFromPoints } from '../utils/vector-math';
 import { quat } from 'gl-matrix';
 import { ILoader, LoadingOptions } from './index';
 import { PLYGaussianData } from './GaussianData';
@@ -252,8 +252,8 @@ export class PLYLoader implements ILoader<PLYGaussianData> {
     return planeFromPoints(points);
   }
   
-  private parseHeader(buffer: ArrayBuffer): PlyHeader {
-    const text = new TextDecoder().decode(buffer.slice(0, Math.min(1 << 20, buffer.byteLength)));
+  private parseHeader(buffer: ArrayBuffer, maxScanBytes = 1 << 20): PlyHeader {
+    const text = new TextDecoder().decode(buffer.slice(0, Math.min(maxScanBytes, buffer.byteLength)));
     const lines = text.split(/\r?\n/);
 
     if (!/^ply\b/.test(lines[0])) throw new Error("Not a PLY file");
@@ -340,4 +340,251 @@ export class PLYLoader implements ILoader<PLYGaussianData> {
       },
     };
   }
+
+  /**
+   * 大 PLY：按块读取 binary_little_endian 顶点，打包后 writeBuffer，不保留整文件 ArrayBuffer。
+   * 小于阈值的文件仍走 loadFile。
+   */
+  async loadFileStreaming(file: File, device: GPUDevice, options?: LoadingOptions): Promise<StreamedGaussianGPU> {
+    const GAUSS_STRIDE = 10;
+    const SH_WORDS = 24;
+    const rawChunkBytes = Math.max(4, (options as { chunkBytes?: number } | undefined)?.chunkBytes ?? (32 * 1024 * 1024));
+    // 与 point_cloud/layouts.ts 的 BUFFER_CONFIG.SPLAT_STRIDE 保持一致
+    const SPLAT_STRIDE = 32;
+
+    options?.onProgress?.({ stage: 'Parsing PLY header', progress: 0.01 });
+    const { buffer: headerProbe, header } = await this.readPlyHeader(file);
+    this.assertFloatLittleEndianVertices(headerProbe, header);
+
+    const stride = header.props.length * 4;
+    const N = header.vertices;
+    const bodyBytes = N * stride;
+    if (header.headerByteLength + bodyBytes > file.size) {
+      throw new Error(`PLY 顶点数据超出文件长度: 需要 ${header.headerByteLength + bodyBytes}，文件 ${file.size}`);
+    }
+
+    const fieldIndices = this.getFieldIndices(header.props);
+    this.validateRequiredFields(fieldIndices);
+    const restCount = header.props.filter((p) => p.startsWith('f_rest_')).length;
+    const shDegree = shDegreeFromNumCoeffs((3 + restCount) / 3) ?? 0;
+    const hasAnyWeight = fieldIndices.weightIndices.some((idx) => idx >= 0);
+    const hasWeights = fieldIndices.weightIndices.every((idx) => idx >= 0);
+    if (hasAnyWeight && !hasWeights) {
+      throw new Error('PLY has partial weight properties (expected weight_0..weight_63)');
+    }
+    const hasExtraPca = fieldIndices.iExtraPcaR >= 0 && fieldIndices.iExtraPcaG >= 0 && fieldIndices.iExtraPcaB >= 0;
+
+    const gaussBytes = N * GAUSS_STRIDE * 2;
+    const shBytes = N * SH_WORDS * 4;
+    const extraBytes = Math.max(1, N) * 16;
+    const weightBytes = hasWeights ? N * 64 * 4 : 0;
+    const splatBytes = Math.max(1, N) * SPLAT_STRIDE;
+    this.assertGpuBufferSizes(device, [
+      ['gaussians', gaussBytes],
+      ['sh', shBytes],
+      ['extra_pca', extraBytes],
+      ['weights', weightBytes],
+      ['splat2d', splatBytes],
+    ]);
+
+    let gaussianBuffer: GPUBuffer | null = null;
+    let shBuffer: GPUBuffer | null = null;
+    let extraPcaBuffer: GPUBuffer | null = null;
+    let weightBuffer: GPUBuffer | null = null;
+    try {
+      gaussianBuffer = device.createBuffer({
+        label: 'gaussians/storage',
+        size: gaussBytes,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      shBuffer = device.createBuffer({
+        label: 'sh/storage',
+        size: shBytes,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      extraPcaBuffer = device.createBuffer({
+        label: 'extra_pca/storage',
+        size: extraBytes,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      if (hasWeights) {
+        weightBuffer = device.createBuffer({
+          label: 'weights/storage',
+          size: weightBytes,
+          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+      }
+
+      const pointsPerChunk = Math.max(1, Math.floor(rawChunkBytes / stride));
+      const gaussHalf = new Uint16Array(pointsPerChunk * GAUSS_STRIDE);
+      const shPacked = new Uint32Array(pointsPerChunk * SH_WORDS);
+      const extraPca = hasExtraPca ? new Float32Array(pointsPerChunk * 4) : null;
+      const weights = hasWeights ? new Float32Array(pointsPerChunk * 64) : null;
+      const row = new Array<number>(header.props.length);
+      const { copySH, wordsPerPoint } = makeCopySH_PackedF16({
+        props: header.props,
+        iDC0: fieldIndices.iDC0,
+        iDC1: fieldIndices.iDC1,
+        iDC2: fieldIndices.iDC2,
+        k: 3,
+        shU32: shPacked,
+      });
+      const moments = createPointMoments();
+      const min: [number, number, number] = [Infinity, Infinity, Infinity];
+      const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
+
+      let chunkIndex = 0;
+      for (let point = 0; point < N;) {
+        if (options?.signal?.aborted) {
+          throw new Error('PLY load aborted');
+        }
+        const count = Math.min(pointsPerChunk, N - point);
+        const start = header.headerByteLength + point * stride;
+        const raw = await file.slice(start, start + count * stride).arrayBuffer();
+        const view = new DataView(raw);
+
+        for (let i = 0; i < count; i++) {
+          const base = i * stride;
+          for (let p = 0; p < header.props.length; p++) {
+            row[p] = view.getFloat32(base + p * 4, true);
+          }
+          const gaussian = this.processGaussian(row, fieldIndices, i, GAUSS_STRIDE, gaussHalf);
+          copySH(i * wordsPerPoint, row, false);
+          if (extraPca) {
+            const base4 = i * 4;
+            extraPca[base4] = row[fieldIndices.iExtraPcaR];
+            extraPca[base4 + 1] = row[fieldIndices.iExtraPcaG];
+            extraPca[base4 + 2] = row[fieldIndices.iExtraPcaB];
+            extraPca[base4 + 3] = 0;
+          }
+          if (weights) {
+            const base64 = i * 64;
+            for (let w = 0; w < 64; w++) {
+              weights[base64 + w] = row[fieldIndices.weightIndices[w]];
+            }
+          }
+          accumulatePoint(moments, gaussian.x, gaussian.y, gaussian.z);
+          if (gaussian.x < min[0]) min[0] = gaussian.x;
+          if (gaussian.y < min[1]) min[1] = gaussian.y;
+          if (gaussian.z < min[2]) min[2] = gaussian.z;
+          if (gaussian.x > max[0]) max[0] = gaussian.x;
+          if (gaussian.y > max[1]) max[1] = gaussian.y;
+          if (gaussian.z > max[2]) max[2] = gaussian.z;
+        }
+
+        this.writeBufferBytes(device, gaussianBuffer, point * GAUSS_STRIDE * 2, gaussHalf, count * GAUSS_STRIDE * 2);
+        this.writeBufferBytes(device, shBuffer, point * SH_WORDS * 4, shPacked, count * SH_WORDS * 4);
+        if (extraPca) {
+          this.writeBufferBytes(device, extraPcaBuffer, point * 16, extraPca, count * 16);
+        }
+        if (weightBuffer && weights) {
+          this.writeBufferBytes(device, weightBuffer, point * 256, weights, count * 256);
+        }
+
+        point += count;
+        chunkIndex++;
+        options?.onProgress?.({
+          stage: 'Uploading Gaussians',
+          progress: 0.02 + 0.98 * (point / N),
+          message: `${point}/${N}`,
+        });
+        if (chunkIndex % 4 === 0) {
+          await device.queue.onSubmittedWorkDone();
+        }
+      }
+
+      // createBuffer 的内容按 WebGPU 规范为零，没有 extra_pca 时不必再整缓冲清零。
+      await device.queue.onSubmittedWorkDone();
+
+      const { centroid, normal } = planeFromMoments(moments);
+      const meta = new PLYGaussianData({
+        gaussianBuffer: new ArrayBuffer(0),
+        shCoefsBuffer: new ArrayBuffer(0),
+        numPoints: N,
+        shDegree,
+        bbox: { min, max },
+        center: [centroid[0], centroid[1], centroid[2]],
+        up: normal ? [normal[0], normal[1], normal[2]] : [1, 0, 0],
+      });
+
+      const uploaded: StreamedGaussianGPU = {
+        device,
+        meta,
+        gaussianBuffer,
+        shBuffer,
+        extraPcaBuffer,
+        weightBuffer,
+      };
+      gaussianBuffer = null;
+      shBuffer = null;
+      extraPcaBuffer = null;
+      weightBuffer = null;
+      options?.onProgress?.({ stage: 'Complete', progress: 1 });
+      return uploaded;
+    } catch (error) {
+      gaussianBuffer?.destroy();
+      shBuffer?.destroy();
+      extraPcaBuffer?.destroy();
+      weightBuffer?.destroy();
+      throw error;
+    }
+  }
+
+  private async readPlyHeader(file: File): Promise<{ buffer: ArrayBuffer; header: PlyHeader }> {
+    let size = Math.min(1 << 20, file.size);
+    for (;;) {
+      const buffer = await file.slice(0, size).arrayBuffer();
+      const text = new TextDecoder('utf-8').decode(buffer);
+      if (text.includes('end_header') || size >= file.size) {
+        return { buffer, header: this.parseHeader(buffer, buffer.byteLength) };
+      }
+      const next = Math.min(file.size, size * 2);
+      if (next === size) {
+        return { buffer, header: this.parseHeader(buffer, buffer.byteLength) };
+      }
+      size = next;
+    }
+  }
+
+  private assertFloatLittleEndianVertices(buffer: ArrayBuffer, header: PlyHeader): void {
+    if (header.format !== 'binary_little_endian') {
+      throw new Error(`流式加载只支持 binary_little_endian PLY，当前是 ${header.format}`);
+    }
+    const text = new TextDecoder('utf-8').decode(buffer.slice(0, header.headerByteLength));
+    let inVertex = false;
+    for (const line of text.split(/\r?\n/)) {
+      if (line.startsWith('element ')) {
+        inVertex = line.startsWith('element vertex ');
+      } else if (inVertex && line.startsWith('property ')) {
+        const parts = line.trim().split(/\s+/);
+        if (parts[1] !== 'float' && parts[1] !== 'float32') {
+          throw new Error(`流式加载只支持 float32 顶点属性，遇到: ${line}`);
+        }
+      }
+    }
+  }
+
+  private assertGpuBufferSizes(device: GPUDevice, sizes: Array<[string, number]>): void {
+    const max = device.limits.maxBufferSize;
+    for (const [label, bytes] of sizes) {
+      if (bytes > max) {
+        throw new Error(`GPU buffer "${label}" 需要 ${bytes} 字节，设备 maxBufferSize 为 ${max}`);
+      }
+    }
+  }
+
+  private writeBufferBytes(device: GPUDevice, buffer: GPUBuffer, bufferOffset: number, view: ArrayBufferView, byteLength: number): void {
+    const bytes = new Uint8Array(byteLength);
+    bytes.set(new Uint8Array(view.buffer, view.byteOffset, byteLength));
+    device.queue.writeBuffer(buffer, bufferOffset, bytes);
+  }
+}
+
+export interface StreamedGaussianGPU {
+  device: GPUDevice;
+  meta: PLYGaussianData;
+  gaussianBuffer: GPUBuffer;
+  shBuffer: GPUBuffer;
+  extraPcaBuffer: GPUBuffer;
+  weightBuffer: GPUBuffer | null;
 }

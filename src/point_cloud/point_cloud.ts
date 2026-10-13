@@ -83,7 +83,12 @@ export class PointCloud {
     return getRenderBindGroupLayout(device);
   }
 
-  constructor(device: GPUDevice, pc: GenericGaussianPointCloudTS, externalBuffers?: { gaussianBuffer: GPUBuffer, shBuffer: GPUBuffer }) {
+  constructor(device: GPUDevice, pc: GenericGaussianPointCloudTS, externalBuffers?: {
+    gaussianBuffer: GPUBuffer;
+    shBuffer: GPUBuffer;
+    extraPcaBuffer?: GPUBuffer;
+    weightBuffer?: GPUBuffer | null;
+  }) {
     this.numPoints = pc.numPoints();
     this.shDeg = pc.shDegree();
     this._maxShDeg = this.shDeg; // Initialize from source SH degree
@@ -116,24 +121,34 @@ export class PointCloud {
       device.queue.writeBuffer(this.shBufferGPU, 0, pc.shCoefsBuffer());
     }
 
-    // Optional extra PCA RGB buffer (vec4<f32> per point); allocate dummy zeros if missing
-    const extraPcaBytes = Math.max(1, this.numPoints) * 16;
-    let extraPcaCPU: ArrayBuffer | null = null;
-    try {
-      if (typeof (pc as any).extraPcaBuffer === 'function') {
-        const buf = (pc as any).extraPcaBuffer() as ArrayBuffer;
-        if (buf && buf.byteLength >= extraPcaBytes) extraPcaCPU = buf;
-      }
-    } catch {}
-    this.extraPcaBufferGPU = device.createBuffer({
-      label: "extra_pca/storage",
-      size: extraPcaBytes,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-    if (extraPcaCPU) {
-      device.queue.writeBuffer(this.extraPcaBufferGPU, 0, extraPcaCPU);
+    // Optional extra PCA RGB buffer (vec4<f32> per point).
+    // Streaming loads pass an already-filled GPU buffer so we do not allocate an N*16 CPU copy.
+    if (externalBuffers?.extraPcaBuffer) {
+      this.extraPcaBufferGPU = externalBuffers.extraPcaBuffer;
     } else {
-      device.queue.writeBuffer(this.extraPcaBufferGPU, 0, new Uint8Array(extraPcaBytes));
+      const extraPcaBytes = Math.max(1, this.numPoints) * 16;
+      let extraPcaCPU: ArrayBuffer | null = null;
+      try {
+        if (typeof (pc as any).extraPcaBuffer === 'function') {
+          const buf = (pc as any).extraPcaBuffer() as ArrayBuffer;
+          if (buf && buf.byteLength >= extraPcaBytes) extraPcaCPU = buf;
+        }
+      } catch {}
+      this.extraPcaBufferGPU = device.createBuffer({
+        label: "extra_pca/storage",
+        size: extraPcaBytes,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      if (extraPcaCPU) {
+        device.queue.writeBuffer(this.extraPcaBufferGPU, 0, extraPcaCPU);
+      } else {
+        device.queue.writeBuffer(this.extraPcaBufferGPU, 0, new Uint8Array(extraPcaBytes));
+      }
+    }
+
+    if (externalBuffers?.weightBuffer) {
+      this.weightBufferGPU = externalBuffers.weightBuffer;
+      this.weightChannels = 64;
     }
 
     // 2D splat buffer (projected attributes + sort keys). Size depends on pipeline; allocate numPoints * stride.

@@ -110,3 +110,71 @@ export function planeFromPoints(
 
   return { centroid, normal };
 }
+
+export interface PointMoments {
+  n: number;
+  sx: number; sy: number; sz: number;
+  sxx: number; syy: number; szz: number;
+  sxy: number; sxz: number; syz: number;
+}
+
+export function createPointMoments(): PointMoments {
+  return { n: 0, sx: 0, sy: 0, sz: 0, sxx: 0, syy: 0, szz: 0, sxy: 0, sxz: 0, syz: 0 };
+}
+
+export function accumulatePoint(m: PointMoments, x: number, y: number, z: number): void {
+  m.n += 1;
+  m.sx += x; m.sy += y; m.sz += z;
+  m.sxx += x * x; m.syy += y * y; m.szz += z * z;
+  m.sxy += x * y; m.sxz += x * z; m.syz += y * z;
+}
+
+/**
+ * Plane fit from one-pass sums. Covariance matches the two-pass result in planeFromPoints:
+ * sum((x-cx)^2) = sum(x^2) - n*cx^2.
+ */
+export function planeFromMoments(
+  m: PointMoments,
+  forceUp: boolean = true
+): { centroid: Vec3; normal?: Vec3 } {
+  if (m.n === 0) {
+    return { centroid: [0, 0, 0] };
+  }
+
+  const cx = m.sx / m.n;
+  const cy = m.sy / m.n;
+  const cz = m.sz / m.n;
+  const centroid: Vec3 = [cx, cy, cz];
+  if (m.n < 3) {
+    return { centroid };
+  }
+
+  const c00 = m.sxx - m.n * cx * cx;
+  const c01 = m.sxy - m.n * cx * cy;
+  const c02 = m.sxz - m.n * cx * cz;
+  const c11 = m.syy - m.n * cy * cy;
+  const c12 = m.syz - m.n * cy * cz;
+  const c22 = m.szz - m.n * cz * cz;
+
+  let x = 1, y = 1, z = 1;
+  const maxIter = 20;
+  for (let iter = 0; iter < maxIter; iter++) {
+    const nx = c00 * x + c01 * y + c02 * z;
+    const ny = c01 * x + c11 * y + c12 * z;
+    const nz = c02 * x + c12 * y + c22 * z;
+    const norm = Math.hypot(nx, ny, nz);
+    if (norm < 1e-10) break;
+    x = nx / norm;
+    y = ny / norm;
+    z = nz / norm;
+  }
+
+  let normal: Vec3 = [x, y, z];
+  if (forceUp && normal[1] < 0) {
+    normal = [-normal[0], -normal[1], -normal[2]];
+  }
+  if (!isFiniteVec3(normal)) {
+    return { centroid };
+  }
+  return { centroid, normal };
+}

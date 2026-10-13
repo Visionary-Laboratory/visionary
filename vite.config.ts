@@ -46,7 +46,7 @@ export default defineConfig({
     rollupOptions: {
       // 确保外部依赖不会被打包进库中
       // external: ['three', 'gl-matrix', 'onnxruntime-web'],
-      external: [/^three(\/.*)?$/, 'gl-matrix', /^onnxruntime-web(\/.*)?$/],
+      external: [/^three(\/.*)?$/, 'gl-matrix', /^onnxruntime-web(\/.*)?$/, 'mp4-muxer'],
       output: [
         {
           format: 'es',
@@ -94,7 +94,8 @@ export default defineConfig({
             'three/examples/jsm/loaders/PLYLoader.js': 'THREE.PLYLoader',
             'gl-matrix': 'glMatrix',
             'onnxruntime-web': 'ort',
-            'onnxruntime-web/webgpu': 'ort'
+            'onnxruntime-web/webgpu': 'ort',
+            'mp4-muxer': 'Mp4Muxer'
           }
         }
       ]
