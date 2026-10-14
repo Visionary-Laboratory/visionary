@@ -15,8 +15,10 @@ export interface Source {
   path: string;
   /** 每条 import 一项，包括只为类型的 import、`export … from` 和 `import()`。 */
   imports: ImportTarget[];
-  /** 代码里出现的名字及次数，不含注释和字符串。`navigator.gpu` 记作 `navigator.gpu`。 */
+  /** 代码里自由出现的名字及次数，不含注释和字符串。`navigator.gpu` 记作 `navigator.gpu`。 */
   names: Map<string, number>;
+  /** 作为属性或成员出现的名字及次数：`a.b` 的 `b`、类和对象字面量里成员的名字。 */
+  members: Map<string, number>;
   /** 字符串字面量和模板字符串的各段。 */
   strings: string[];
 }
@@ -46,14 +48,16 @@ function analyzeOne(path: string, text: string, known: Set<string>): Source {
   const tree = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
   const imports: ImportTarget[] = [];
   const names = new Map<string, number>();
+  const members = new Map<string, number>();
   const strings: string[] = [];
+  const count = (map: Map<string, number>, name: string) => map.set(name, (map.get(name) ?? 0) + 1);
 
   const visit = (node: ts.Node): void => {
     const specifier = moduleSpecifier(node);
     if (specifier !== undefined) imports.push(resolve(path, specifier, known));
     if (ts.isIdentifier(node)) {
-      const name = isNavigatorGpu(node) ? 'navigator.gpu' : node.text;
-      names.set(name, (names.get(name) ?? 0) + 1);
+      if (isMemberName(node)) count(members, node.text);
+      else count(names, isNavigatorGpu(node) ? 'navigator.gpu' : node.text);
     }
     if (ts.isStringLiteralLike(node) || ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) {
       strings.push(node.text);
@@ -61,7 +65,7 @@ function analyzeOne(path: string, text: string, known: Set<string>): Source {
     ts.forEachChild(node, visit);
   };
   visit(tree);
-  return { path, imports, names, strings };
+  return { path, imports, names, members, strings };
 }
 
 function moduleSpecifier(node: ts.Node): string | undefined {
@@ -80,6 +84,15 @@ function moduleSpecifier(node: ts.Node): string | undefined {
     return node.moduleReference.expression.text;
   }
   return undefined;
+}
+
+function isMemberName(node: ts.Identifier): boolean {
+  const parent = node.parent;
+  if (ts.isPropertyAccessExpression(parent)) return parent.name === node;
+  if (ts.isQualifiedName(parent)) return parent.right === node;
+  return (ts.isPropertyAssignment(parent) || ts.isPropertyDeclaration(parent) || ts.isPropertySignature(parent)
+    || ts.isMethodDeclaration(parent) || ts.isMethodSignature(parent) || ts.isGetAccessorDeclaration(parent)
+    || ts.isSetAccessorDeclaration(parent) || ts.isEnumMember(parent)) && parent.name === node;
 }
 
 function isNavigatorGpu(node: ts.Identifier): boolean {

@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { entryExports } from './architecture/entry-exports';
-import { EXEMPTIONS, type Exemption } from './architecture/exemptions';
-import { architectureViolations, auditExemptions, type RuleId, type Violation } from './architecture/rules';
+import { EXEMPTIONS, EXEMPTIONS_AT_START, type Exemption } from './architecture/exemptions';
+import { architectureViolations, auditExemptions, violationKey, type RuleId, type Violation } from './architecture/rules';
 import { analyze, readRepository, type RepoFile } from './architecture/sources';
 import { PLACEMENTS, PUBLIC_ENTRIES, placementOf } from './architecture/target-structure';
 
@@ -32,9 +32,7 @@ describe('今天的源码树', () => {
   });
 
   it('没有豁免清单之外的违规，也没有用不着或新加的豁免行', () => {
-    const start = (JSON.parse(readFileSync(here('exemptions-at-start.json'), 'utf8')) as [RuleId, string, string, number][])
-      .map(([rule, file, detail, count]) => ({ rule, file, detail, count }));
-    const problems = auditExemptions(architectureViolations(sources), EXEMPTIONS, start);
+    const problems = auditExemptions(architectureViolations(sources), EXEMPTIONS, EXEMPTIONS_AT_START);
     expect(problems, `\n${problems.join('\n\n')}\n`).toEqual([]);
   });
 
@@ -43,14 +41,14 @@ describe('今天的源码树', () => {
     // 唯一的例外是 S3 的纯移动提交：路径跟着文件改，同时更新这里的哈希。
     const digest = createHash('sha256').update(readFileSync(here('exemptions-at-start.json'))).digest('hex');
     expect(digest, 'tests/architecture/exemptions-at-start.json 被改了：恢复它，去改 exemptions.ts')
-      .toBe('7f3753ee1bb6b51a2f728a7a77f84cacf702d03e9dcab2d8cc997a9c3900c468');
+      .toBe('ec3eec18163d4b5db1878178bf7bf5765773822ccdc8330e97dad2d878f1b559');
   });
 
   it('每行豁免都写明属于哪一类；物理和缝写明由哪个阶段消掉，不动没有阶段', () => {
     const malformed = EXEMPTIONS.filter(({ category, stage, why }) =>
       !why || (category === '不动' ? stage !== undefined : stage === undefined));
     expect(malformed).toEqual([]);
-    const keys = EXEMPTIONS.map(({ rule, file, detail }) => [rule, file, detail].join(' '));
+    const keys = EXEMPTIONS.map(violationKey);
     expect(keys.filter((key, i) => keys.indexOf(key) !== i), '同一处违规只写一行').toEqual([]);
   });
 });
@@ -69,6 +67,7 @@ describe('公开入口快照', () => {
 /** 规则看到的一个合成文件。 */
 const file = (path: string, text: string): RepoFile => ({ path, text });
 const violationsOf = (...files: RepoFile[]) => architectureViolations(analyze(files));
+const violationsFor = (rule: RuleId, ...files: RepoFile[]) => violationsOf(...files).filter(v => v.rule === rule);
 
 describe('内核纯度', () => {
   it('内核 import three 算违规，只为类型的 import 也算', () => {
@@ -100,38 +99,53 @@ describe('内核纯度', () => {
       "const label = 'requestAnimationFrame';",
       'const adapter = await navigator.gpu.requestAdapter();',
       'globalThis.gaussianRenderer = this;',
-      "window.addEventListener('resize', () => requestAnimationFrame(draw));",
+      "window.addEventListener('resize', onResize);",
+      'addEventListener(\'keydown\', onKey);',
       "const canvas = document.createElement('canvas');",
       'if (!adapter) alert(navigator.userAgent);',
     ].join('\n'))).map(({ detail, count }) => [detail, count])).toEqual([
       ['use globalThis', 1],
       ['use window', 1],
       ['use addEventListener', 1],
-      ['use requestAnimationFrame', 1],
       ['use document', 1],
       ['use alert', 1],
       ['use navigator', 1],
     ]);
   });
 
-  it('帧归应用：其余引擎模块也不准调用 requestAnimationFrame，但可以用应用交来的 DOM', () => {
+  it('只认自由的名字：自己类上同名的方法和属性不算', () => {
+    expect(violationsOf(file('src/timeline/AnimationState.ts', [
+      'class AnimationState {',
+      '  addEventListener(listener: Listener): void { this.listeners.push(listener); }',
+      '}',
+      'state.addEventListener(onTick);',
+      'const options = { document: null, window: 0 };',
+    ].join('\n')))).toEqual([]);
+  });
+});
+
+describe('帧归应用', () => {
+  it('Visionary 引擎的任何模块都不准调用 requestAnimationFrame，经 window 调也不行', () => {
     expect(violationsOf(
       file('src/app/GaussianModel.ts', 'requestAnimationFrame(() => this.flush());'),
+      file('src/exportMedia/RecordingCamera.ts', 'window.requestAnimationFrame(tick);'),
+      file('src/renderer/gaussian_renderer.ts', 'requestAnimationFrame(draw);'),
       file('src/gizmo/gizmo-controller.ts', "canvas.addEventListener('pointerdown', onDown); window.devicePixelRatio;"),
       file('src/main.ts', 'requestAnimationFrame(loop);'),
     )).toEqual([
-      { rule: 'kernel-purity', file: 'src/app/GaussianModel.ts', detail: 'use requestAnimationFrame', count: 1 },
+      { rule: 'frame-ownership', file: 'src/app/GaussianModel.ts', detail: 'requestAnimationFrame', count: 1 },
+      { rule: 'frame-ownership', file: 'src/exportMedia/RecordingCamera.ts', detail: 'requestAnimationFrame', count: 1 },
+      { rule: 'frame-ownership', file: 'src/renderer/gaussian_renderer.ts', detail: 'requestAnimationFrame', count: 1 },
     ]);
   });
 });
 
 /** 规则按目标结构判断，被 import 的文件要在合成的文件集里才能解析。 */
 const target = (path: string) => file(path, '');
-const directionOf = (...files: RepoFile[]) => violationsOf(...files).filter(v => v.rule === 'dependency-direction');
 
 describe('依赖方向', () => {
   it('内核不依赖任何引擎组件，引擎模块不依赖要移出引擎的文件', () => {
-    expect(directionOf(
+    expect(violationsFor('dependency-direction', 
       file('src/utils/index.ts', "export * from './env-map-helper';"),
       file('src/ONNX/index.ts', "export { ONNXModelTester } from './test_loader';"),
       target('src/utils/env-map-helper.ts'),
@@ -143,7 +157,7 @@ describe('依赖方向', () => {
   });
 
   it('只允许 录制与导出 → three.js 适配层 → visionary-core 和 gizmo → three.js 适配层', () => {
-    expect(directionOf(
+    expect(violationsFor('dependency-direction', 
       file('src/app/GaussianThreeJSRenderer.ts', "import { GaussianRenderer } from '../renderer';"),
       file('src/exportMedia/exportVideo.ts', "import type { GaussianThreeJSRenderer } from '../app/GaussianThreeJSRenderer';"),
       file('src/gizmo/gizmo-manager.ts', [
@@ -163,11 +177,9 @@ describe('依赖方向', () => {
   });
 });
 
-const entryOf = (...files: RepoFile[]) => violationsOf(...files).filter(v => v.rule === 'public-entry');
-
 describe('只经公开入口', () => {
   it('从模块外面只能 import 它的公开入口，模块里面随便', () => {
-    expect(entryOf(
+    expect(violationsFor('public-entry', 
       file('src/app/GaussianThreeJSRenderer.ts', [
         "import { GaussianRenderer } from '../renderer';",
         "import { PointCloud } from '../core';",
@@ -182,7 +194,7 @@ describe('只经公开入口', () => {
   });
 
   it('测试、演示和要移出引擎的文件也只能经公开入口', () => {
-    expect(entryOf(
+    expect(violationsFor('public-entry', 
       file('tests/ply-streaming.test.ts', "import { PLYLoader } from '../src/io/ply_loader';"),
       file('demo/showcase/scripts/ShowcaseScene.ts', "import { initThreeContext } from '@/app/three-context';"),
       file('src/app/app.ts', "import { GaussianRenderer } from '../renderer/gaussian_renderer';\nimport { DOMElements } from './dom-elements';"),
@@ -205,14 +217,13 @@ describe('只经公开入口', () => {
   });
 });
 
-const vocabularyOf = (...files: RepoFile[]) => violationsOf(...files).filter(v => v.rule === 'app-vocabulary');
-
 describe('应用词表', () => {
-  it('引擎源码里出现 editor 的名字、标记、DOM id 或 i18n 键都算违规', () => {
-    expect(vocabularyOf(
+  it('Visionary 引擎的源码里出现 editor 的名字、标记、DOM id 或 i18n 键都算违规', () => {
+    expect(violationsFor('app-vocabulary', 
       file('src/gizmo/gizmo-controller.ts', 'helper.userData.__visionaryEditorHelper = true;'),
       file('src/app/GaussianThreeJSRenderer.ts', [
         "const panel = document.getElementById('mainViewContainer');",
+        "const tools = document.querySelector('#rightPanelTools > .item');",
         "const meta = { app: 'VisionaryEditor' };",
       ].join('\n')),
       file('src/exportMedia/RecordingCamera.ts', [
@@ -222,6 +233,7 @@ describe('应用词表', () => {
     ).map(({ file, detail }) => `${file} ${detail}`).sort()).toEqual([
       ['src/gizmo/gizmo-controller.ts', '__visionaryEditorHelper'],
       ['src/app/GaussianThreeJSRenderer.ts', 'mainViewContainer'],
+      ['src/app/GaussianThreeJSRenderer.ts', 'rightPanelTools'],
       ['src/app/GaussianThreeJSRenderer.ts', 'VisionaryEditor'],
       ['src/exportMedia/RecordingCamera.ts', 'data-i18n'],
       ['src/exportMedia/RecordingCamera.ts', 'recordingCamera.previewWindowTitle'],
@@ -231,7 +243,7 @@ describe('应用词表', () => {
   });
 
   it('普通字符串和注释不算；要移出引擎的文件不查', () => {
-    expect(vocabularyOf(
+    expect(violationsFor('app-vocabulary', 
       file('src/exportMedia/RecordingCamera.ts', [
         '// 预览窗口以后搬进 VisionaryEditor',
         "const canvas = container.querySelector('canvas');",

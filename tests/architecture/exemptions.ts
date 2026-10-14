@@ -1,7 +1,8 @@
+import start from './exemptions-at-start.json';
 import type { RuleId, Violation } from './rules';
 
 /**
- * 引擎今天已有的架构违规。这是欠账，不是许可。
+ * Visionary 引擎今天已有的架构违规。这是欠账，不是许可。
  *
  * 清单只会变短。`tests/architecture.test.ts` 在这些情况下失败：
  * - 出现清单里没有的违规，或次数比清单多；
@@ -32,7 +33,7 @@ interface Group {
   category: Category;
   stage?: Stage;
   why: string;
-  rows: [RuleId, string, string, number][];
+  rows: Row[];
 }
 
 const GROUPS: Group[] = [
@@ -94,7 +95,7 @@ const GROUPS: Group[] = [
   {
     category: '缝',
     stage: 'S3',
-    why: '适配层的 managers barrel 转出早期示例 app 的三个管理器，供根入口使用。S3 删掉根入口后，早期示例 app 改为直接 import 它们。',
+    why: '适配层的 managers barrel 转出早期示例 app 的三个管理器，供根入口和早期示例 app 使用。S3 删掉根入口；搬文件时早期示例 app 的 import 路径本来就要改，顺带改成直接 import 这三个文件，早期示例 app 的代码不动。',
     rows: [
       ['dependency-direction', 'src/app/managers/index.ts', 'src/app/managers/camera-manager.ts', 1],
       ['dependency-direction', 'src/app/managers/index.ts', 'src/app/managers/animation-manager.ts', 1],
@@ -186,10 +187,9 @@ const GROUPS: Group[] = [
   },
   {
     category: '不动',
-    why: '推理附属原样不动：初始化失败时经 globalThis 弹 alert；ORT 的 wasm 路径配置读写 window.ort。',
+    why: '推理附属原样不动：初始化失败时经 globalThis 取 alert 弹窗；ORT 的 wasm 路径配置读写 window.ort。',
     rows: [
       ['kernel-purity', 'src/ONNX/onnx_gpu_io.ts', 'use globalThis', 1],
-      ['kernel-purity', 'src/ONNX/onnx_gpu_io.ts', 'use alert', 1],
       ['kernel-purity', 'src/config/ort-config.ts', 'use window', 14],
     ],
   },
@@ -201,18 +201,11 @@ const GROUPS: Group[] = [
     ],
   },
   {
-    category: '不动',
-    why: '时间轴自己的事件接口与 DOM 的 addEventListener 同名，不是 DOM 依赖。时间轴随 DynamicPointCloud 原样不动。',
+    category: '缝',
+    stage: 'S6',
+    why: 'GaussianModel 自己用 requestAnimationFrame 合并变换更新，而帧应由应用驱动。S6 重写适配层时改成由应用的帧循环驱动。',
     rows: [
-      ['kernel-purity', 'src/timeline/AnimationState.ts', 'use addEventListener', 1],
-      ['kernel-purity', 'src/timeline/TimelineController.ts', 'use addEventListener', 1],
-    ],
-  },
-  {
-    category: '不动',
-    why: 'GaussianModel 用 requestAnimationFrame 合并变换更新。本路线没有安排；S6 改适配层时可以顺手去掉。',
-    rows: [
-      ['kernel-purity', 'src/app/GaussianModel.ts', 'use requestAnimationFrame', 1],
+      ['frame-ownership', 'src/app/GaussianModel.ts', 'requestAnimationFrame', 1],
     ],
   },
   {
@@ -296,5 +289,10 @@ const GROUPS: Group[] = [
   },
 ];
 
-export const EXEMPTIONS: Exemption[] = GROUPS.flatMap(({ rows, ...group }) =>
-  rows.map(([rule, file, detail, count]) => ({ rule, file, detail, count, ...group })));
+type Row = [RuleId, string, string, number];
+const toViolation = ([rule, file, detail, count]: Row): Violation => ({ rule, file, detail, count });
+
+export const EXEMPTIONS: Exemption[] = GROUPS.flatMap(({ rows, ...group }) => rows.map(row => ({ ...toViolation(row), ...group })));
+
+/** 划线当天的清单，豁免行不能比它多。 */
+export const EXEMPTIONS_AT_START: Violation[] = (start as Row[]).map(toViolation);

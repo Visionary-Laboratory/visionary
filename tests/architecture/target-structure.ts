@@ -1,7 +1,7 @@
 /**
  * Visionary 引擎的目标结构：今天的每个源文件将来归哪个模块。
  *
- * 引擎分四个模块，各有一个公开入口：
+ * Visionary 引擎分四个模块，各有一个公开入口：
  *
  *   visionary-core（渲染内核，含推理附属与解码附属）
  *   three.js 适配层 → visionary-core
@@ -130,7 +130,7 @@ export const PLACEMENTS: ReadonlyArray<readonly [string, Placement]> = [
   ['src/three-integration/ThreeJsCameraAdapter.ts', outside('删除：没人用')],
   ['src/three-integration/DebugHelpers.ts', outside('删除：没人用')],
   ['src/app/transform-tracker.ts', outside('删除：没人用')],
-  ['src/icons/', outside('删除：没人用')],
+  ['src/icons/', outside('未定：core-boundary §3 没写；两个语言图标，库里没人引用')],
   ['src/ONNX/test_loader.ts', outside('测试目录：ONNX 的测试代码')],
   ['src/ONNX/test_utils.ts', outside('测试目录：ONNX 的测试代码')],
   ['src/ONNX/integration_test.ts', outside('测试目录：ONNX 的测试代码')],
