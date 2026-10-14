@@ -1,5 +1,7 @@
 # Local Gaussian capacity: validation
 
+2026-10-14 起这个测试改由 vitest 跑（`npm test`），下面是当时用 `node:test` 的验证记录。
+
 Spec: `tmp/review-fixes/issues/03-local-gaussian-capacity.md`.
 
 Validated on 2026-10-13 using Node.js 24.15.0.

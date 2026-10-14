@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { test, type TestContext } from 'node:test';
+import { onTestFinished, test } from 'vitest';
 import type * as THREE from 'three/webgpu';
 import { FileLoader } from '../src/app/managers/file-loader';
 import { GaussianLoader } from '../src/app/managers/gaussian-loader';
@@ -46,14 +46,14 @@ function makeSplat() {
   return makeFile([body], 'sample.splat');
 }
 
-function setup(t: TestContext, capacity = 1) {
+function setup(capacity = 1) {
   for (const [name, value] of Object.entries({
     GPUBufferUsage: { STORAGE: 128, COPY_DST: 8, COPY_SRC: 4, UNIFORM: 64, INDIRECT: 256 },
     GPUShaderStage: { VERTEX: 1, FRAGMENT: 2, COMPUTE: 4 },
   })) {
     const original = Object.getOwnPropertyDescriptor(globalThis, name);
     Object.defineProperty(globalThis, name, { configurable: true, value });
-    t.after(() => {
+    onTestFinished(() => {
       if (original) Object.defineProperty(globalThis, name, original);
       else Reflect.deleteProperty(globalThis, name);
     });
@@ -101,8 +101,8 @@ const rejectedFiles = [
 ];
 
 for (const sample of rejectedFiles) {
-  test(`full model capacity rejects local ${sample.label} before file reads or GPU work`, async t => {
-    const { renderer, manager, loader, errors, buffers, uploads } = setup(t);
+  test(`full model capacity rejects local ${sample.label} before file reads or GPU work`, async () => {
+    const { renderer, manager, loader, errors, buffers, uploads } = setup();
     await loader.createFromFile(renderer, makePly('existing.ply').file);
     const existing = manager.getModels();
     buffers.length = uploads.length = 0;
@@ -128,8 +128,8 @@ for (const sample of [
   { label: 'PLY above the streaming threshold', make: () => makePly('sample.ply', streamThreshold + 1), streaming: true, type: 'ply' },
   { label: 'SPLAT', make: makeSplat, streaming: false, type: 'splat' },
 ]) {
-  test(`local ${sample.label} loads normally and can load again after removing a model`, async t => {
-    const { renderer, manager, loader, errors, progress, buffers, uploads } = setup(t);
+  test(`local ${sample.label} loads normally and can load again after removing a model`, async () => {
+    const { renderer, manager, loader, errors, progress, buffers, uploads } = setup();
     const { file, reads } = sample.make();
     const fractions: number[] = [];
     const options = { onProgress: (fraction: number) => fractions.push(fraction) };
@@ -165,8 +165,8 @@ for (const sample of [
   });
 }
 
-test('local Gaussian files retain unique default names', async t => {
-  const { renderer, manager, loader } = setup(t, 2);
+test('local Gaussian files retain unique default names', async () => {
+  const { renderer, manager, loader } = setup(2);
   const { file } = makePly();
   const first = await loader.createFromFile(renderer, file);
   const second = await loader.createFromFile(renderer, file);
@@ -175,8 +175,8 @@ test('local Gaussian files retain unique default names', async t => {
 });
 
 for (const entry of ['loadFile', 'loadGaussianFile', 'loadLocalPly'] as const) {
-  test(`FileLoader.${entry} rejects full capacity before any local file or GPU work`, async t => {
-    const { renderer, device, loader, fileLoader, manager, errors, buffers, uploads } = setup(t);
+  test(`FileLoader.${entry} rejects full capacity before any local file or GPU work`, async () => {
+    const { renderer, device, loader, fileLoader, manager, errors, buffers, uploads } = setup();
     await loader.createFromFile(renderer, makePly('existing.ply').file);
     const existing = manager.getModels();
     buffers.length = uploads.length = 0;
@@ -190,8 +190,8 @@ for (const entry of ['loadFile', 'loadGaussianFile', 'loadLocalPly'] as const) {
   });
 }
 
-test('local ONNX still requires camera matrices before entering its dedicated loader', async t => {
-  const { renderer, loader, manager, errors, buffers, uploads } = setup(t);
+test('local ONNX still requires camera matrices before entering its dedicated loader', async () => {
+  const { renderer, loader, manager, errors, buffers, uploads } = setup();
   await loader.createFromFile(renderer, makePly().file);
   buffers.length = uploads.length = 0;
   const { file, reads } = makeFile([], 'model.ONNX');
@@ -203,8 +203,8 @@ test('local ONNX still requires camera matrices before entering its dedicated lo
   assert.equal(manager.getModelCount(), 1);
 });
 
-test('ModelManager still enforces its limit at registration', async t => {
-  const { renderer, loader, manager } = setup(t);
+test('ModelManager still enforces its limit at registration', async () => {
+  const { renderer, loader, manager } = setup();
   const model = await loader.createFromFile(renderer, makePly().file);
   const { id, ...entry } = model.getEntry();
   assert.throws(() => manager.addModel(entry), /Reached model limit \(1\).*Remove models before adding more/);

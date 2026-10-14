@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { test, type TestContext } from 'node:test';
+import { onTestFinished, test, vi } from 'vitest';
 import { PLYLoader } from '../src/io/ply_loader';
 import type { LoadingOptions } from '../src/io';
 
@@ -40,13 +40,13 @@ function makePly({ weights = false, extraPca = false, points = 1 } = {}) {
   return { file: new TrackedFile([header, body], 'sample.ply'), bodyReads };
 }
 
-function makeDevice(t: TestContext, maxBufferSize: number, maxStorageBufferBindingSize: number) {
+function makeDevice(maxBufferSize: number, maxStorageBufferBindingSize: number) {
   // WebGPU is the external boundary; keep the real loader and PLY parser.
   const originalUsage = Object.getOwnPropertyDescriptor(globalThis, 'GPUBufferUsage');
   Object.defineProperty(globalThis, 'GPUBufferUsage', {
     configurable: true, value: { STORAGE: 128, COPY_DST: 8 },
   });
-  t.after(() => {
+  onTestFinished(() => {
     if (originalUsage) Object.defineProperty(globalThis, 'GPUBufferUsage', originalUsage);
     else Reflect.deleteProperty(globalThis, 'GPUBufferUsage');
   });
@@ -79,22 +79,23 @@ for (const limit of ['maxBufferSize', 'maxStorageBufferBindingSize'] as const) {
     { label: 'sh', bytes: 96, weights: false },
     { label: 'weights', bytes: 256, weights: true },
   ]) {
-    test(`streaming PLY rejects ${sample.label} above ${limit} before any body or GPU work`, async t => {
+    test(`streaming PLY rejects ${sample.label} above ${limit} before any body or GPU work`, async () => {
       const { file, bodyReads } = makePly({ weights: sample.weights });
       const maximum = sample.bytes - 1;
       const { device, buffers, uploads } = makeDevice(
-        t, limit === 'maxBufferSize' ? maximum : 1024,
+        limit === 'maxBufferSize' ? maximum : 1024,
         limit === 'maxStorageBufferBindingSize' ? maximum : 1024,
       );
       // The header probe can contain body bytes: no later body slice alone does
       // not prove they stayed unparsed. Observe native float reads as well.
-      const bodyParser = t.mock.method(DataView.prototype, 'getFloat32');
+      const bodyParser = vi.spyOn(DataView.prototype, 'getFloat32');
+      onTestFinished(() => bodyParser.mockRestore());
 
       await assert.rejects(new PLYLoader().loadFileStreaming(file, device), error => {
         assert.match(String(error), new RegExp(`"${sample.label}".*${sample.bytes}.*${limit}.*${maximum}`));
         return true;
       });
-      assert.equal(bodyParser.mock.callCount(), 0);
+      assert.equal(bodyParser.mock.calls.length, 0);
       assert.deepEqual(bodyReads, []);
       assert.deepEqual(buffers, []);
       assert.deepEqual(uploads, []);
@@ -104,10 +105,10 @@ for (const limit of ['maxBufferSize', 'maxStorageBufferBindingSize'] as const) {
 
 for (const weights of [false, true]) {
   for (const atLimit of [false, true]) {
-    test(`streaming PLY loads ${weights ? 'weighted' : 'unweighted'} data ${atLimit ? 'at both limits' : 'below both limits'}`, async t => {
+    test(`streaming PLY loads ${weights ? 'weighted' : 'unweighted'} data ${atLimit ? 'at both limits' : 'below both limits'}`, async () => {
       const { file } = makePly({ weights, extraPca: true, points: 2 });
       const maximum = atLimit ? (weights ? 512 : 192) : 1024;
-      const { device, buffers } = makeDevice(t, maximum, maximum);
+      const { device, buffers } = makeDevice(maximum, maximum);
       const options: LoadingOptions & { chunkBytes: number } = { chunkBytes: 4 };
       const loaded = await new PLYLoader().loadFileStreaming(file, device, options);
 
@@ -134,9 +135,9 @@ for (const weights of [false, true]) {
   }
 }
 
-test('streaming PLY allocates a zeroed extra PCA buffer even without PCA properties', async t => {
+test('streaming PLY allocates a zeroed extra PCA buffer even without PCA properties', async () => {
   const { file } = makePly();
-  const { device, buffers, uploads } = makeDevice(t, 96, 96);
+  const { device, buffers, uploads } = makeDevice(96, 96);
   const loaded = await new PLYLoader().loadFileStreaming(file, device);
 
   assert.equal(loaded.extraPcaBuffer, buffers[2]);
